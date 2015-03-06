@@ -14,7 +14,7 @@ import re
 import time
 
 # Welcome
-print '--- Generate Virtualbox templates to help thwart vm detection - Mikael, @nsmfoo ---'
+print '--- Generate VirtualBox templates to help thwart vm detection - Mikael, @nsmfoo ---'
 print '[*] Creating VirtualBox modifications ..'
 
 # Randomize serial
@@ -308,7 +308,7 @@ logfile.write('VBoxManage modifyvm "$1" --macaddress1\t' + le_big_mac)
 logfile.close()
 
 print '[*] Finished: A template shell script has been created named:', file_name
-print '[*] Creatating guest based modification file (to be run inside the guest)'
+print '[*] Creating guest based modification file (to be run inside the guest)'
 
 # Write all data to file
 if dmi_info['DmiSystemProduct']:
@@ -318,7 +318,7 @@ else:
 
 logfile = file(file_name, 'w+')
 
-# I only had access to DELL and Lenov hardware running Windows natively, will more later on
+# I only had access to DELL and Lenovo hardware running Windows natively
 if 'DELL' in acpi_list[1]:
     manu = acpi_list[1] + '__'
 elif 'LENOVO' in acpi_list[1]:
