@@ -2,7 +2,7 @@
 # Mikael,@nsmfoo - blog.prowling.nu
 
 # Tested on Ubuntu 14.04 LTS, using several brands of computers and types..but there is not guarantee that it will work anyway
-# Prerequisites: python-dmidecode and cd-drive: apt-get install python-dmidecode libcdio-utils
+# Prerequisites: python-dmidecode, cd-drive and acpidump: apt-get install python-dmidecode libcdio-utils acpidump
 
 # Import stuff
 import commands
@@ -355,6 +355,7 @@ if len(d_year) > 2:
     d_year = d_year[:2]
 
 logfile.write('@reg add HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System /v SystemBiosDate /t REG_MULTI_SZ /d "' + d_month + '/' + d_day + '/' + d_year + '" /f\n')
+
 logfile.close()
 print '[*] Finished: A Windows batch file has been created named:', file_name
 
