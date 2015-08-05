@@ -281,10 +281,21 @@ for k, v in cdrom_dmi.iteritems():
     else:
         logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/piix3ide/0/Config/SecondaryMaster/' + k + '\t\'' + v + '\'\n')
 
-# Get the DSDT image
-os.system("dd if=/sys/firmware/acpi/tables/DSDT of=DSDT.bin >/dev/null 2>&1")
-# Write to file
-logfile.write('VBoxManage setextradata "$1" "VBoxInternal/Devices/acpi/0/Config/CustomTable"\t' + os.getcwd() + '/DSDT.bin\n')
+# Get and write DSDT image to file
+if dmi_info['DmiSystemProduct']:
+    file_name = 'DSDT_' + dmi_info['DmiSystemProduct'].replace(" ", "") + '.bin'
+    os.system("dd if=/sys/firmware/acpi/tables/DSDT of=" + file_name + " >/dev/null 2>&1")
+    logfile.write('VBoxManage setextradata "$1" "VBoxInternal/Devices/acpi/0/Config/CustomTable"\t' + os.getcwd() + '/' + file_name + '\n')
+
+else:
+    file_name = 'DSDT_' + dmi_info['DmiChassisType'] + '_' + dmi_info['DmiBoardProduct'] + '.bin'
+    os.system("dd if=/sys/firmware/acpi/tables/DSDT of=" + file_name + " >/dev/null 2>&1")
+    logfile.write('VBoxManage setextradata "$1" "VBoxInternal/Devices/acpi/0/Config/CustomTable"\t' + os.getcwd() + '/' + file_name + '\n')
+
+# check file size
+if os.path.getsize(file_name) > 64000:
+    print "[WARNING] Size of the DSDT file is too large (> 64k). Try to build a template from another computer"
+    exit()
 
 acpi_misc = commands.getoutput('acpidump -s | grep DSDT | grep -o "\(([A-Za-z0-9].*)\)" | tr -d "()"')
 acpi_list = acpi_misc.split(' ')
