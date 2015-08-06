@@ -26,7 +26,7 @@ When you run the script, the output will be:
 You can use the scrip to prepare not only your cuckoo guests, but any vm that you need to make vm detection harder on.
 Before you apply the batch script inside the guest, please disable UAC otherwise you will not be able to modify the registry with the script
 
-
+Virtualbox 5 users should stick to using the "Legacy" (System -> Acceleration) paravirtulization interface for now.
 
 
 
