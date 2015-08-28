@@ -13,6 +13,11 @@ import uuid
 import re
 import time
 
+# Check dependencies
+if not (os.path.exists("/usr/bin/cd-drive")) or not (os.path.exists("/usr/bin/acpidump")) or not (os.path.exists("/usr/share/python-dmidecode")):
+ print '[WARNING] Dependencies are missing, please verify that you have installed: cd-drive, acpidump and python-dmidecode'
+ exit()
+
 # Welcome
 print '--- Generate VirtualBox templates to help thwart vm detection - Mikael, @nsmfoo ---'
 print '[*] Creating VirtualBox modifications ..'
@@ -52,7 +57,11 @@ for v in dmidecode.baseboard().values():
     if type(v) == dict and v['dmi_type'] == 2:
         serial_number = v['data']['Serial Number']
         dmi_info['DmiBoardVersion'] = v['data']['Version']
-        dmi_info['DmiBoardProduct'] = v['data']['Product Name']
+        if isinstance(v['data']['Product Name'], int ):
+         dmi_info['DmiBoardProduct'] = str(v['data']['Product Name'])+ ' '
+        else:
+         dmi_info['DmiBoardProduct'] = v['data']['Product Name']
+
         dmi_info['DmiBoardVendor'] = v['data']['Manufacturer']
 
 # This is hopefully not the best solution ..
@@ -334,10 +343,12 @@ else:
 
 logfile = file(file_name, 'w+')
 
-# I only had access to DELL and Lenovo hardware running Windows natively
+# Tested on DELL, Lenovo clients and HP (old) server hardware running Windows natively
 if 'DELL' in acpi_list[1]:
     manu = acpi_list[1] + '__'
 elif 'LENOVO' in acpi_list[1]:
+    manu = acpi_list[1]
+elif 'HP' in acpi_list[1]:
     manu = acpi_list[1]
 
 logfile.write('@ECHO OFF\r\n')
