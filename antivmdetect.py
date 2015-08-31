@@ -341,11 +341,9 @@ logfile = file(file_name, 'w+')
 
 # Tested on DELL, Lenovo clients and HP (old) server hardware running Windows natively
 if 'DELL' in acpi_list[1]:
-    manu = acpi_list[1] + '__'
-elif 'LENOVO' in acpi_list[1]:
-    manu = acpi_list[1]
-elif 'HP' in acpi_list[1]:
-    manu = acpi_list[1]
+      manu = acpi_list[1] + '__'
+else:
+  manu = acpi_list[1]
 
 logfile.write('@ECHO OFF\r\n')
 
