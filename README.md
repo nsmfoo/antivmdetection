@@ -16,6 +16,7 @@ When you run the script, the output will be:
 
 #Notes:
 
+0) When the antivmdetect script can't find any suitable values to use it will comment these settings in the newly created script. These needs manual review as they might have impact on what is displayed in the VM.
 1) Create the VM, but don't start it. The shell script needs to be run before installation! Verify that "I/O APIC" is enabled (system > Motherboard). The script assumes that the storage controller is IDE.
 2) Run the shell script to apply the setting to the guest 
 3) Install the Operating System 
@@ -23,7 +24,8 @@ When you run the script, the output will be:
 5) Run the batch script inside the guest. Remember that the settings that gets modified are reverted after each reboot. So make it auto run if needed. 
 
 
-You can use the scrip to prepare not only your cuckoo guests, but any vm that you need to make vm detection harder on.
+
+You can use the script to prepare not only your cuckoo guests, but any vm that you need to make vm detection harder on.
 Before you apply the batch script inside the guest, please disable UAC otherwise you will not be able to modify the registry with the script
 
 Virtualbox 5 users should stick to using the "Legacy" (System -> Acceleration) paravirtulization interface for now.

@@ -57,11 +57,7 @@ for v in dmidecode.baseboard().values():
     if type(v) == dict and v['dmi_type'] == 2:
         serial_number = v['data']['Serial Number']
         dmi_info['DmiBoardVersion'] = v['data']['Version']
-        if isinstance(v['data']['Product Name'], int ):
-         dmi_info['DmiBoardProduct'] = str(v['data']['Product Name'])+ ' '
-        else:
-         dmi_info['DmiBoardProduct'] = v['data']['Product Name']
-
+        dmi_info['DmiBoardProduct'] = "string:" + v['data']['Product Name']
         dmi_info['DmiBoardVendor'] = v['data']['Manufacturer']
 
 # This is hopefully not the best solution ..
@@ -145,8 +141,12 @@ for v in dmidecode.chassis().values():
 chassi_dict = {'Other': 1, 'Unknown': 2, 'Desktop': 3, 'Low Profile Desktop': 4, 'Pizza Box': 5, 'Mini Tower': 6,
                'Tower': 7, 'Portable': 8, 'Laptop': 9, 'Notebook': 10, 'Hand Held': 11, 'Docking Station': 12,
                'All in One': 13, 'Sub Notebook': 14, 'Space-saving': 15, 'Lunch Box': 16, 'Main Server Chassis': 17,
-               'Expansion Chassis': 18, 'SubChassis': 19, 'Bus Expansion Chassis': 20, 'Peripheral Chassis': 21}
+               'Expansion Chassis': 18, 'SubChassis': 19, 'Bus Expansion Chassis': 20, 'Peripheral Chassis': 21, 'RAID Chassis': 22,
+               'Rack Mount Chassis': 23, 'Sealed-case PC': 24, 'Multi-system chassis': 25, 'Compact PCI': 26, 'Advanced TCA': 27,
+               'Blade': 28, 'Blade Enclosure': 29, 'Tablet': 30, 'Convertible': 31, 'Detachable': 32}
+
 dmi_info['DmiChassisType'] = str(chassi_dict.get(dmi_info['DmiChassisType']))
+
 # python-dmidecode does not reveal all values .. this is plan B
 chassi = commands.getoutput("dmidecode -t3")
 try:
@@ -155,7 +155,7 @@ except:
     dmi_info['DmiChassisAssetTag'] = '** No value to retrieve **'
 
 # Create a new chassi serial number
-dmi_info['DmiChassisSerial'] = (serial_randomize(0, len(chassi_serial)))
+dmi_info['DmiChassisSerial'] = "string:" + (serial_randomize(0, len(chassi_serial)))
 
 for v in dmidecode.processor().values():
     dmi_info['DmiProcVersion'] = v['data']['Version']
@@ -206,30 +206,22 @@ try:
         disk_dmi['SerialNumber'] = (serial_randomize(0, len(disk_serial)))
         # Check for HP Legacy RAID
     elif os.path.exists("/dev/cciss/c0d0"):
-        # Needs smartctl to be able to get the correct information
-        if os.path.exists("/usr/sbin/smartctl"):
-            hp_old_raid = commands.getoutput("smartctl -d cciss,1 -i /dev/cciss/c0d0")
-            disk_serial = re.search("Serial number:([0-9A-Za-z ]*)", hp_old_raid).group(1).replace(" ", "")
-            disk_dmi['SerialNumber'] = (serial_randomize(0, len(disk_serial)))
-        else:
-            print "Install smartmontools: apt-get install smartmontools"
+        hp_old_raid = commands.getoutput("smartctl -d cciss,1 -i /dev/cciss/c0d0")
+        disk_serial = re.search("Serial number:([0-9A-Za-z ]*)", hp_old_raid).group(1).replace(" ", "")
+        disk_dmi['SerialNumber'] = (serial_randomize(0, len(disk_serial)))
 except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
 
-# Disk firmeware rev
+# Disk firmware rev
 try:
     if os.path.exists("/dev/sda"):
         disk_fwrev = commands.getoutput(
             "hdparm -i /dev/sda | grep -o 'FwRev=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
         disk_dmi['FirmwareRevision'] = disk_fwrev
     elif os.path.exists("/dev/cciss/c0d0"):
-        # Needs smartctl to be able to get the correct information
-        if os.path.exists("/usr/sbin/smartctl"):
-            hp_old_raid = commands.getoutput("smartctl -d cciss,1 -i /dev/cciss/c0d0")
-            disk_dmi['FirmwareRevision'] = re.search("Revision:([0-9A-Za-z ]*)", hp_old_raid).group(1).replace(" ", "")
-        else:
-            print "Install smartmontools: apt-get install smartmontools"
+         hp_old_raid = commands.getoutput("smartctl -d cciss,1 -i /dev/cciss/c0d0")
+         disk_dmi['FirmwareRevision'] = re.search("Revision:([0-9A-Za-z ]*)", hp_old_raid).group(1).replace(" ", "")
 except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
@@ -241,12 +233,8 @@ try:
             "hdparm -i /dev/sda | grep -o 'Model=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
         disk_dmi['ModelNumber'] = disk_modelno
     elif os.path.exists("/dev/cciss/c0d0"):
-        # Needs smartctl to be able to get the correct information
-        if os.path.exists("/usr/sbin/smartctl"):
-            hp_old_raid = commands.getoutput("smartctl -d cciss,1 -i /dev/cciss/c0d0")
-            disk_dmi['ModelNumber'] = re.search("Product:([0-9A-Za-z ]*)", hp_old_raid).group(1).replace(" ", "")
-        else:
-            print "Install smartmontools: apt-get install smartmontools"
+        hp_old_raid = commands.getoutput("smartctl -d cciss,1 -i /dev/cciss/c0d0")
+        disk_dmi['ModelNumber'] = re.search("Product:([0-9A-Za-z ]*)", hp_old_raid).group(1).replace(" ", "")
 except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
