@@ -204,11 +204,19 @@ try:
         disk_serial = commands.getoutput(
             "hdparm -i /dev/sda | grep -o 'SerialNo=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
         disk_dmi['SerialNumber'] = (serial_randomize(0, len(disk_serial)))
+
+        if (len(disk_dmi['SerialNumber']) > 20):
+            disk_dmi['SerialNumber'] = disk_dmi['SerialNumber'][:20]
+
         # Check for HP Legacy RAID
     elif os.path.exists("/dev/cciss/c0d0"):
         hp_old_raid = commands.getoutput("smartctl -d cciss,1 -i /dev/cciss/c0d0")
         disk_serial = re.search("Serial number:([0-9A-Za-z ]*)", hp_old_raid).group(1).replace(" ", "")
         disk_dmi['SerialNumber'] = (serial_randomize(0, len(disk_serial)))
+
+        if (len(disk_dmi['SerialNumber']) > 20):
+            disk_dmi['SerialNumber'] = disk_dmi['SerialNumber'][:20]
+
 except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
