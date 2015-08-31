@@ -358,11 +358,16 @@ logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' 
 logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 /f\r\n')
 
 # FADT
+logfile.write('@reg copy HKLM\HARDWARE\ACPI\FADT\VBOX__ HKLM\HARDWARE\ACPI\FADT\\' + manu + ' /s /f\r\n')
+logfile.write('@reg delete HKLM\HARDWARE\ACPI\FADT\VBOX__ /f\r\n')
+
 logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___  /s /f\r\n')
 logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP /f\r\n')
 logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' /s /f\r\n')
 logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 /f\r\n')
 
+logfile.write('@reg copy HKLM\HARDWARE\ACPI\RSDT\VBOX__ HKLM\HARDWARE\ACPI\RSDT\\' + manu + ' /s /f\r\n')
+logfile.write('@reg delete HKLM\HARDWARE\ACPI\RSDT\VBOX__ /f\r\n')
 # RSDT - differs between XP and W7
 logfile.write('@reg query HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\\VBOXRSDT > nul 2> nul\r\n')
 # if XP then ..
@@ -391,6 +396,36 @@ logfile.write('@reg add HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System /v System
 
 # Prevent WMI identification
 # logfile.write('@reg add HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\PlugPlay /v Start /t REG_MULTI_SZ /d "4" /f\r\n')
+
+logfile.write('@reg copy HKLM\SYSTEM\ControlSet001\Services\VBoxGuest HKLM\SYSTEM\ControlSet001\Services\VBGuest /s /f\r\n')
+logfile.write('@reg delete HKLM\SYSTEM\ControlSet001\Services\VBoxGuest /f\r\n')
+logfile.write('@reg copy HKLM\SYSTEM\ControlSet001\Services\VBoxMouse HKLM\SYSTEM\ControlSet001\Services\VBMouse /s /f\r\n')
+logfile.write('@reg delete HKLM\SYSTEM\ControlSet001\Services\VBoxMouse /f\r\n')
+logfile.write('@reg copy HKLM\SYSTEM\ControlSet001\Services\VBoxService HKLM\SYSTEM\ControlSet001\Services\VBService /s /f\r\n')
+logfile.write('@reg delete HKLM\SYSTEM\ControlSet001\Services\VBoxService /f\r\n')
+logfile.write('@reg copy HKLM\SYSTEM\ControlSet001\Services\VBoxSF HKLM\SYSTEM\ControlSet001\Services\VBSF /s /f\r\n')
+logfile.write('@reg delete HKLM\SYSTEM\ControlSet001\Services\VBoxSF /f\r\n')
+logfile.write('@reg copy HKLM\SYSTEM\ControlSet001\Services\VBoxVideo HKLM\SYSTEM\ControlSet001\Services\VBVideo /s /f\r\n')
+logfile.write('@reg delete HKLM\SYSTEM\ControlSet001\Services\VBoxVideo /f\r\n')
+logfile.write('@reg copy HKLM\SYSTEM\ControlSet001\Services\VBoxVideo HKLM\SYSTEM\ControlSet001\Services\VBVideo /s /f\r\n')
+logfile.write('@reg delete HKLM\SYSTEM\ControlSet001\Services\VBoxVideo /f\r\n')
+
+logfile.write('@reg copy   HKLM\SYSTEM\CurrentControlSet\Enum\IDE\CdRomVBOX_CD-ROM_____________________________1.0_____ HKLM\SYSTEM\CurrentControlSet\Enum\IDE\CdRomVB_CD-ROM_____________________________1.0_____ /s /f\r\n')
+logfile.write('@reg delete HKLM\SYSTEM\CurrentControlSet\Enum\IDE\CdRomVBOX_CD-ROM_____________________________1.0_____ /f\r\n')
+logfile.write('@reg delete HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\IDE\CdRomVB_CD-ROM_____________________________1.0_____\\42562d3231303037333036372020202020202020 /v FriendlyName /f\r\n')
+logfile.write('@reg add    HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\IDE\CdRomVB_CD-ROM_____________________________1.0_____\\42562d3231303037333036372020202020202020 /v FriendlyName /d "VB CD-ROM" /f\r\n')
+logfile.write('@reg delete HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\IDE\CdRomVB_CD-ROM_____________________________1.0_____\\42562d3231303037333036372020202020202020 /v HardwareID /f\r\n')
+logfile.write('@reg add    HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\IDE\CdRomVB_CD-ROM_____________________________1.0_____\\42562d3231303037333036372020202020202020 /v HardwareID /t "REG_MULTI_SZ" /d "IDE\CdRomVB_CD-ROM_____________________________1.0_____" /f\r\n')
+
+
+logfile.write('@reg copy   HKLM\SYSTEM\CurrentControlSet\Enum\IDE\DiskVBOX_HARDDISK___________________________1.0_____  HKLM\SYSTEM\CurrentControlSet\Enum\IDE\DiskVB_HARDDISK___________________________1.0_____ /s /f\r\n')
+logfile.write('@reg delete HKLM\SYSTEM\CurrentControlSet\Enum\IDE\DiskVBOX_HARDDISK___________________________1.0_____ /f\r\n')
+logfile.write('@reg delete HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\IDE\DiskVB_HARDDISK___________________________1.0_____\\42563862613534626132362d3564663966332064 /v FriendlyName /f\r\n')
+logfile.write('@reg add    HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\IDE\DiskVB_HARDDISK___________________________1.0_____\\42563862613534626132362d3564663966332064 /v FriendlyName /d "VB HARDDISK" /f\r\n')
+logfile.write('@reg delete HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\IDE\DiskVB_HARDDISK___________________________1.0_____\\42563862613534626132362d3564663966332064 /v HardwareID /f\r\n')
+logfile.write('@reg add    HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\IDE\DiskVB_HARDDISK___________________________1.0_____\\42563862613534626132362d3564663966332064 /v HardwareID /t "REG_MULTI_SZ" /d "IDE\DiskVB_HARDDISK___________________________1.0_____" /f\r\n')
+
+
 
 logfile.close()
 print '[*] Finished: A Windows batch file has been created named:', file_name
