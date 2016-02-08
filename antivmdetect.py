@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # Mikael,@nsmfoo - blog.prowling.nu
 
-# Tested on Ubuntu 14.04 LTS, using several brands of computers and types..but there is not guarantee that it will work anyway
+# Tested on Ubuntu 14.04 LTS, using several brands of computers and types..but there is not an guarantee that it will work anyway
 # Prerequisites: python-dmidecode, cd-drive and acpidump: apt-get install python-dmidecode libcdio-utils acpidump
 
 # Import stuff
@@ -389,9 +389,28 @@ if len(d_year) > 2:
 
 logfile.write('@reg add HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System /v SystemBiosDate /t REG_MULTI_SZ /d "' + d_month + '/' + d_day + '/' + d_year + '" /f\r\n')
 
+# OS Install Date
+format = '%m/%d/%Y %I:%M %p'
+start = "1/1/2012 5:30 PM"
+end = time.strftime("%m/%d/%Y %I:%M %p")
+prop = random.random()
+stime = time.mktime(time.strptime(start, format))
+etime = time.mktime(time.strptime(end, format))
+ptime = stime + prop * (etime - stime)
+logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v InstallDate /t REG_DWORD /d "' + hex(int(ptime)) + '" /f\r\n')
+logfile.write('@reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Internet Explorer\SQM" /v InstallDate /t REG_DWORD /d "' + hex(int(ptime)) + '" /f\r\n')
+
+# MachineGuid
+machineGuid = str(uuid.uuid4())
+logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography" /v MachineGuid /t REG_SZ /d "' + machineGuid + '" /f\r\n')
+
 # Prevent WMI identification
 # logfile.write('@reg add HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\PlugPlay /v Start /t REG_MULTI_SZ /d "4" /f\r\n')
 
 logfile.close()
 print '[*] Finished: A Windows batch file has been created named:', file_name
+
+
+
+
 
