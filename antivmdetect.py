@@ -12,10 +12,11 @@ import random
 import uuid
 import re
 import time
+import StringIO
 
 # Check dependencies
-if not (os.path.exists("/usr/bin/cd-drive")) or not (os.path.exists("/usr/bin/acpidump")) or not (os.path.exists("/usr/share/python-dmidecode")):
- print '[WARNING] Dependencies are missing, please verify that you have installed: cd-drive, acpidump and python-dmidecode'
+if not (os.path.exists("/usr/bin/cd-drive")) or not (os.path.exists("/usr/bin/acpidump")) or not (os.path.exists("/usr/share/python-dmidecode")) or not (os.path.exists("DevManView.exe")):
+ print '[WARNING] Dependencies are missing, please verify that you have installed: cd-drive, acpidump and python-dmidecode and a copy of DevManView.exe in the path of this script'
  exit()
 
 # Welcome
@@ -404,8 +405,18 @@ logfile.write('@reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Internet Explorer\
 machineGuid = str(uuid.uuid4())
 logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography" /v MachineGuid /t REG_SZ /d "' + machineGuid + '" /f\r\n')
 
-# Prevent WMI identification
-# logfile.write('@reg add HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\services\PlugPlay /v Start /t REG_MULTI_SZ /d "4" /f\r\n')
+# Requires a copy of the DevManView.exe for the target architecture (http://www.nirsoft.net/utils/device_manager_view.html)
+with open("DevManView.exe", "rb") as file:
+    data = file.read()
+
+logfile.write('(')
+s = StringIO.StringIO(data.encode("base64"))
+for line in s:
+    logfile.write('echo ' + line)
+logfile.write(')>fernweh.tmp\r\n')
+logfile.write('@certutil -decode fernweh.tmp "DevManView.exe"\r\n')
+logfile.write('@DevManView.exe /uninstall "PCI\VEN_80EE&DEV_CAFE"* /use_wildcard\r\n')
+logfile.write('@del DevManView.exe fernweh.tmp\r\n')
 
 logfile.close()
 print '[*] Finished: A Windows batch file has been created named:', file_name

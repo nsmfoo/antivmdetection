@@ -23,13 +23,16 @@ When you run the script, the output will be:
 4) Move the batch script to the newly installed guest.
 5) Run the batch script inside the guest. Remember that the settings that gets modified are reverted after each reboot. So make it auto run if needed. 
 
-
-
 You can use the script to prepare not only your cuckoo guests, but any vm that you need to make vm detection harder on.
 Before you apply the batch script inside the guest, please disable UAC otherwise you will not be able to modify the registry with the script
 
 Virtualbox 5 users should stick to using the Legacy and Hyper-V Paravirtualization interfaces for now (System -> Acceleration).
 
+
+#Version History:
+
+< 0.1.0 No version history kept, need to start somewhere I guess ..
+0.1.0 Resolved the WMI detection make famous by the HT. Added DevManView.exe (your choice of architecture) to the prerequisites.  
 
 /Mikael
 
