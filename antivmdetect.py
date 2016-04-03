@@ -187,7 +187,7 @@ bash = """ if [ $# -eq 0 ]
   then
     echo "[*] Please add vm name!"
     echo "[*] Available vms:"
-    VBoxManage list vms | awk {' print $1 '} | sed 's/"//g'
+    VBoxManage list vms | awk -F'"' {' print $2 '} | sed 's/"//g'
     exit
 fi """
 logfile.write(bash + '\n')
