@@ -177,7 +177,7 @@ except:
 
 # Write all data collected so far to file
 if dmi_info['DmiSystemProduct']:
-    file_name = dmi_info['DmiSystemProduct'].replace(" ", "") + '.sh'
+    file_name = dmi_info['DmiSystemProduct'].replace(" ", "").replace("/", "_") + '.sh'
 else:
     file_name = dmi_info['DmiChassisType'] + '_' + dmi_info['DmiBoardProduct'] + '.sh'
 
@@ -187,7 +187,7 @@ bash = """ if [ $# -eq 0 ]
   then
     echo "[*] Please add vm name!"
     echo "[*] Available vms:"
-    VBoxManage list vms | awk {' print $1 '} | sed 's/"//g'
+    VBoxManage list vms | awk -F'"' {' print $2 '} | sed 's/"//g'
     exit
 fi """
 logfile.write(bash + '\n')
@@ -290,7 +290,7 @@ for k, v in cdrom_dmi.iteritems():
 # Get and write DSDT image to file
 print '[*] Creating a DSDT file...'
 if dmi_info['DmiSystemProduct']:
-    dsdt_name = 'DSDT_' + dmi_info['DmiSystemProduct'].replace(" ", "") + '.bin'
+    dsdt_name = 'DSDT_' + dmi_info['DmiSystemProduct'].replace(" ", "").replace("/", "_") + '.bin'
     os.system("dd if=/sys/firmware/acpi/tables/DSDT of=" + dsdt_name + " >/dev/null 2>&1")
     logfile.write('VBoxManage setextradata "$1" "VBoxInternal/Devices/acpi/0/Config/CustomTable"\t' + os.getcwd() + '/' + dsdt_name + '\n')
 
@@ -334,7 +334,7 @@ print '[*] Creating guest based modification file (to be run inside the guest)..
 
 # Write all data to file
 if dmi_info['DmiSystemProduct']:
-    file_name = dmi_info['DmiSystemProduct'].replace(" ", "") + '.bat'
+    file_name = dmi_info['DmiSystemProduct'].replace(" ", "").replace("/", "_") + '.bat'
 else:
     file_name = dmi_info['DmiChassisType'] + '_' + dmi_info['DmiBoardProduct'] + '.bat'
 
