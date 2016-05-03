@@ -32,12 +32,16 @@ def serial_randomize(start=0, string_length=10):
 
 dmi_info = {}
 
-for v in dmidecode.bios().values():
+
+try:
+  for v in dmidecode.bios().values():
     if type(v) == dict and v['dmi_type'] == 0:
         dmi_info['DmiBIOSVendor'] = v['data']['Vendor']
-        dmi_info['DmiBIOSReleaseDate'] = v['data']['Relase Date']
+        dmi_info['DmiBIOSReleaseDate'] = v['data']['Release Date']
         dmi_info['DmiBIOSVersion'] = v['data']['Version']
         biosversion = v['data']['BIOS Revision']
+except:
+   dmi_info['DmiBIOSReleaseDate'] = v['data']['Relase Date']
 
 try:
     dmi_info['DmiBIOSReleaseMajor'], dmi_info['DmiBIOSReleaseMinor'] = biosversion.split('.', 1)
@@ -182,7 +186,7 @@ else:
     file_name = dmi_info['DmiChassisType'] + '_' + dmi_info['DmiBoardProduct'] + '.sh'
 
 logfile = file(file_name, 'w+')
-logfile.write('# Generated on: ' + time.strftime("%H:%M:%S") + '\n')
+logfile.write('#Script generated on: ' + time.strftime("%H:%M:%S") + '\n')
 bash = """ if [ $# -eq 0 ]
   then
     echo "[*] Please add vm name!"
@@ -248,12 +252,24 @@ except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
 
-# Write more things to file
+
+logfile.write('controller=`VBoxManage showvminfo $1 --machinereadable | grep SATA`\n')
+
+logfile.write('if [[ -z "$controller" ]]; then\n')
 for k, v in disk_dmi.iteritems():
     if '** No value to retrieve **' in v:
         logfile.write('# VBoxManage setextradata "$1" VBoxInternal/Devices/piix3ide/0/Config/PrimaryMaster/' + k + '\t' + v + '\n')
     else:
         logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/piix3ide/0/Config/PrimaryMaster/' + k + '\t\'' + v + '\'\n')
+
+logfile.write('else\n')
+for k, v in disk_dmi.iteritems():
+    if '** No value to retrieve **' in v:
+        logfile.write('# VBoxManage setextradata "$1" VBoxInternal/Devices/ahci/0/Config/Port0/' + k + '\t' + v + '\n')
+    else:
+        logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/ahci/0/Config/Port0/' + k + '\t\'' + v + '\'\n')
+logfile.write('fi\n')
+
 
 # CD-ROM information
 cdrom_dmi = {}
@@ -281,11 +297,26 @@ else:
     logfile.write('# No CD-ROM detected: ** No values to retrieve **\n')
 
 # And some more
-for k, v in cdrom_dmi.iteritems():
-    if '** No value to retrieve **' in v:
-        logfile.write('# VBoxManage setextradata "$1" VBoxInternal/Devices/piix3ide/0/Config/SecondaryMaster/' + k + '\t' + v + '\n')
-    else:
-        logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/piix3ide/0/Config/SecondaryMaster/' + k + '\t\'' + v + '\'\n')
+
+if os.path.islink('/dev/cdrom'):
+
+ logfile.write('if [[ -z "$controller" ]]; then\n')
+
+ for k, v in cdrom_dmi.iteritems():
+     if '** No value to retrieve **' in v:
+        logfile.write('# VBoxManage setextradata "$1" VBoxInternal/Devices/piix3ide/0/Config/PrimarySlave/' + k + '\t' + v + '\n')
+     else:
+        logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/piix3ide/0/Config/PrimarySlave/' + k + '\t\'' + v + '\'\n')
+
+ logfile.write('else\n')
+
+ for k, v in cdrom_dmi.iteritems():
+     if '** No value to retrieve **' in v:
+        logfile.write('# VBoxManage setextradata "$1" VBoxInternal/Devices/ahci/0/Config/Port1/' + k + '\t' + v + '\n')
+     else:
+        logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/ahci/0/Config/Port1/' + k + '\t\'' + v + '\'\n')
+ logfile.write('fi\n')
+
 
 # Get and write DSDT image to file
 print '[*] Creating a DSDT file...'
@@ -304,10 +335,10 @@ acpi_list = acpi_misc.split(' ')
 acpi_list = filter(None, acpi_list)
 
 logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiOemId\t\'' + acpi_list[1] + '\'\n')
-logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiCreatorId\t\'' + acpi_list[4] + '\'\n')
+logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiCreatorId\t\'string:' + acpi_list[4] + '\'\n')
 logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiCreatorRev\t\'' + acpi_list[5] + '\'\n')
 
-# Randomize MAC address, based on onboard interface MAC
+# Randomize MAC address, based on the host interface MAC
 mac_seed = ':'.join(re.findall('..', '%012x' % uuid.getnode()))[0:9]
 big_mac = mac_seed + "%02x:%02x:%02x" % (
     random.randint(0, 255),
@@ -316,14 +347,27 @@ big_mac = mac_seed + "%02x:%02x:%02x" % (
 )
 le_big_mac = re.sub(':', '', big_mac)
 # The last thing!
-logfile.write('VBoxManage modifyvm "$1" --macaddress1\t' + le_big_mac)
+logfile.write('VBoxManage modifyvm "$1" --macaddress1\t' + le_big_mac + '\n')
+
+# Check the numbers of CPUs, should be 2 or more
+logfile.write('cpu_count=$(VBoxManage showvminfo --machinereadable "$1" | grep cpus=[0-9]* | sed "s/cpus=//")\t\n')
+logfile.write('if [ $cpu_count -lt "2" ]; then echo "[WARNING] CPU count is less than 2. Consider adding more!"; fi\t\n')
+
+# Check the set memory size. If it's less them 2GB notify user (soft warning).
+logfile.write('memory_size=$(VBoxManage showvminfo --machinereadable "$1" | grep memory=[0-9]* | sed "s/memory=//")\t\n')
+logfile.write('if [ $memory_size -lt "2048" ]; then echo "[WARNING] Memory size is 2GB or less. Consider adding more memory!"; fi\t\n')
+
+# Check if hostonlyifs IP address is the default
+logfile.write('hostint_ip=$(VBoxManage list hostonlyifs | grep IPAddress: | awk {\' print $2 \'})\t\n')
+logfile.write('if [ $hostint_ip == \'192.168.56.1\' ]; then echo "[WARNING] You are using the default IP/IP-range. Consider changing the IP and the range used!"; fi\t\n')
+
 # Done!
 logfile.close()
 
 print '[*] Finished: A template shell script has been created named:', file_name
 print '[*] Finished: A DSDT dump has been created named:', dsdt_name
 
-# check file size
+# Check file size
 try:
     if os.path.getsize(dsdt_name) > 64000:
         print "[WARNING] Size of the DSDT file is too large (> 64k). Try to build a template from another computer"
@@ -386,11 +430,11 @@ logfile.write('@reg add HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System /v VideoB
 d_month, d_day, d_year = dmi_info['DmiBIOSReleaseDate'].split('/')
 
 if len(d_year) > 2:
-    d_year = d_year[:2]
+    d_year = d_year[2:]
 
 logfile.write('@reg add HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System /v SystemBiosDate /t REG_MULTI_SZ /d "' + d_month + '/' + d_day + '/' + d_year + '" /f\r\n')
 
-# OS Install Date
+# OS Install Date (InstallDate)
 format = '%m/%d/%Y %I:%M %p'
 start = "1/1/2012 5:30 PM"
 end = time.strftime("%m/%d/%Y %I:%M %p")
@@ -405,23 +449,26 @@ logfile.write('@reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Internet Explorer\
 machineGuid = str(uuid.uuid4())
 logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography" /v MachineGuid /t REG_SZ /d "' + machineGuid + '" /f\r\n')
 
+# Microsoft Digital Product ID (ProductId)
+serial = [5,3,7,5]
+o = []
+
+for x in serial:
+ o.append("%s" % ''.join(["%s" % random.randint(0, 9) for num in range(0, x)]))
+
+newDigitalProductId = "{0}-{1}-{2}-{3}".format(o[0], o[1], o[2], o[3])
+logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ProductId /t REG_SZ /d "' + newDigitalProductId + '" /f\r\n')
+
 # Requires a copy of the DevManView.exe for the target architecture (http://www.nirsoft.net/utils/device_manager_view.html)
 with open("DevManView.exe", "rb") as file:
     data = file.read()
-
-logfile.write('(')
 s = StringIO.StringIO(data.encode("base64"))
 for line in s:
-    logfile.write('echo ' + line)
-logfile.write(')>fernweh.tmp\r\n')
+    logfile.write('(echo ' + line +')>>fernweh.tmp\r\n')
+
 logfile.write('@certutil -decode fernweh.tmp "DevManView.exe"\r\n')
 logfile.write('@DevManView.exe /uninstall "PCI\VEN_80EE&DEV_CAFE"* /use_wildcard\r\n')
 logfile.write('@del DevManView.exe fernweh.tmp\r\n')
 
 logfile.close()
 print '[*] Finished: A Windows batch file has been created named:', file_name
-
-
-
-
-
