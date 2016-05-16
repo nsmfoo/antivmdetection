@@ -361,6 +361,11 @@ logfile.write('if [ $memory_size -lt "2048" ]; then echo "[WARNING] Memory size 
 logfile.write('hostint_ip=$(VBoxManage list hostonlyifs | grep IPAddress: | awk {\' print $2 \'})\t\n')
 logfile.write('if [ $hostint_ip == \'192.168.56.1\' ]; then echo "[WARNING] You are using the default IP/IP-range. Consider changing the IP and the range used!"; fi\t\n')
 
+# Check if the legacy paravirtualization interface is being used (Usage of the legacy will mitigate the "cpuid feature" check)
+logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -oi legacy)\t\n')
+logfile.write('if [ -z $virtualization_type ]; then echo "[WARNING] Please switch paravirtualization interface to: legacy!"; fi\t\n')
+
+
 # Done!
 logfile.close()
 
@@ -370,7 +375,7 @@ print '[*] Finished: A DSDT dump has been created named:', dsdt_name
 # Check file size
 try:
     if os.path.getsize(dsdt_name) > 64000:
-        print "[WARNING] Size of the DSDT file is too large (> 64k). Try to build a template from another computer"
+        print "[WARNING] Size of the DSDT file is too large (> 64k). Try to build the template from another computer"
 except:
     pass
 
@@ -472,3 +477,4 @@ logfile.write('@del DevManView.exe fernweh.tmp\r\n')
 
 logfile.close()
 print '[*] Finished: A Windows batch file has been created named:', file_name
+

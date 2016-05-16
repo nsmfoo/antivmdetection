@@ -36,7 +36,7 @@ The main script will create the following files:
 
 * 0.1.0: 
     + Resolved the WMI detection make famous by the HT. Added DevManView.exe (your choice of architecture) to the prerequisites.  
-* 0.1.1
+* 0.1.1:
    + Check for CPU count (Less than 2 == alert).
    + Check for memory size (Less than 2GB == alert).
    + Check if the default IP/IP-range is being used for vboxnet0 (You can ignore the notification if you don't use it). 
@@ -48,6 +48,11 @@ The main script will create the following files:
    + The DevManView inclusion did not work as expected, It should be fixed in this release. 
    + Supports SATA controller as well (Previously only IDE settings was modified)
    + Updated the readme.
+
+* 0.1.2:
+   + Check if the Legacy paravirtualization interface is being used (Usage of the Legacy interface will mitigate the "cpuid feature" detection)
+
+
 
 /Mikael
 
