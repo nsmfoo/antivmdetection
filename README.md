@@ -22,8 +22,8 @@ The main script will create the following files:
 * When the antivmdetect script can't find any suitable values to use, it will comment these settings in the newly created script, with a "#". These needs manual review as they might have impact on what is displayed in the VM.
 * Create the VM, Verify that "I/O APIC" is enabled (system > Motherboard). But don't start it, also exit the VirtualBox GUI. The shell script needs to be run before installation!. 
 * The script expects that the storage layout to look like the following:
-    + IDE: Primary master (Disk) and Primary slave (CD-ROM)
-    + SATA: Port 0 (Disk) and Port 1 (CD-ROM)
+       + IDE: Primary master (Disk) and Primary slave (CD-ROM)
+       + SATA: Port 0 (Disk) and Port 1 (CD-ROM)
 * Run the shell script to apply the setting to the guest 
 * Install the Windows Operating System (so far only tested on XP and W7) 
 * Move the batch script to the newly installed guest.
@@ -32,27 +32,32 @@ The main script will create the following files:
 
 #Version History:
 
-< 0.1.0 No version history kept, need to start somewhere I guess.
-
-* 0.1.0: 
-    + Resolved the WMI detection make famous by the HT. Added DevManView.exe (your choice of architecture) to the prerequisites.  
-* 0.1.1:
-   + Check for CPU count (Less than 2 == alert).
-   + Check for memory size (Less than 2GB == alert).
-   + Check if the default IP/IP-range is being used for vboxnet0 (You can ignore the notification if you don't use it). 
-   + Randomizing the ProductId.
-   + Merged PR #3 from r-sierra (Thanks for helping out!
-   + Fixed a bug in the AcpiCreatorId (Thanks @Nadacsc for reporting it to me!).
-   + Fixed a bug in the DmiBIOSReleaseDate parsing.
-   + Fixed a bug in DmiBIOSReleaseDate, to handle both the "default" misspelled variant and the correctly spelled one (Thanks @WanpengQian for reporting it to me!).
-   + The DevManView inclusion did not work as expected, It should be fixed in this release. 
-   + Supports SATA controller as well (Previously only IDE settings was modified)
-   + Updated the readme.
-
+* 0.1.3:
+    + Copy and set the CPU brand string. 
+    + Check if an audio device is attached to the guest. Reference: http://www.joesecurity.org/reports/report-61f847bcb69d0fe86ad7a4ba3f057be5.html
+    + Check OS architecture vs DevManView binary.
+    + Randomizing the ProductId in two more locations: 
+	    + HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Internet Explorer\Registration\ProductId.		
+	    + HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\DefaultProductKey\ProductId.
+    + Purge the Windows product key from the registry (to prevent someone from stealing it...).
+    + Edit the DigitalProductId (HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\DigitalProductId) to match the new ProductId.
 * 0.1.2:
-   + Check if the Legacy paravirtualization interface is being used (Usage of the Legacy interface will mitigate the "cpuid feature" detection)
-
-
+    + Check if the Legacy paravirtualization interface is being used (Usage of the Legacy interface will mitigate the "cpuid feature" detection).
+* 0.1.1:
+    + Check for CPU count (Less than 2 == alert).
+    + Check for memory size (Less than 2GB == alert).
+    + Check if the default IP/IP-range is being used for vboxnet0 (You can ignore the notification if you don't use it). 
+    + Randomizing the ProductId.
+    + Merged PR #3 from r-sierra (Thanks for helping out!
+    + Fixed a bug in the AcpiCreatorId (Thanks @Nadacsc for reporting it to me!).
+    + Fixed a bug in the DmiBIOSReleaseDate parsing.
+    + Fixed a bug in DmiBIOSReleaseDate, to handle both the "default" misspelled variant and the correctly spelled one (Thanks @WanpengQian for reporting it to me!).
+    + The DevManView inclusion did not work as expected, It should be fixed in this release. 
+    + Supports SATA controller as well (Previously only IDE settings was modified)
+    + Updated the readme
+* 0.1.0: 
+    + Resolved the WMI detection make famous by the HT. Added DevManView.exe (your choice of architecture) to the prerequisites.
+* < 0.1.0 No version history kept, need to start somewhere I guess.
 
 /Mikael
 

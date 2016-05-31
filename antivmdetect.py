@@ -32,7 +32,6 @@ def serial_randomize(start=0, string_length=10):
 
 dmi_info = {}
 
-
 try:
   for v in dmidecode.bios().values():
     if type(v) == dict and v['dmi_type'] == 0:
@@ -239,7 +238,7 @@ except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
 
-# Disk Model number
+# Disk model number
 try:
     if os.path.exists("/dev/sda"):
         disk_modelno = commands.getoutput(
@@ -251,7 +250,6 @@ try:
 except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
-
 
 logfile.write('controller=`VBoxManage showvminfo $1 --machinereadable | grep SATA`\n')
 
@@ -269,7 +267,6 @@ for k, v in disk_dmi.iteritems():
     else:
         logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/ahci/0/Config/Port0/' + k + '\t\'' + v + '\'\n')
 logfile.write('fi\n')
-
 
 # CD-ROM information
 cdrom_dmi = {}
@@ -297,7 +294,6 @@ else:
     logfile.write('# No CD-ROM detected: ** No values to retrieve **\n')
 
 # And some more
-
 if os.path.islink('/dev/cdrom'):
 
  logfile.write('if [[ -z "$controller" ]]; then\n')
@@ -349,6 +345,25 @@ le_big_mac = re.sub(':', '', big_mac)
 # The last thing!
 logfile.write('VBoxManage modifyvm "$1" --macaddress1\t' + le_big_mac + '\n')
 
+# Copy and set the CPU brand string
+cpu_brand = commands.getoutput("cat /proc/cpuinfo | grep -m 1 'model name' | cut -d  ':' -f2 | sed 's/^ *//'")
+
+if len(cpu_brand) < 47:
+   cpu_brand = cpu_brand.ljust(47,' ')
+
+eax_values=('80000002', '80000003', '80000004')
+registers=('eax', 'ebx', 'ecx', 'edx')
+
+i=4
+while i<=47:
+    for e in eax_values:
+      for r in registers:
+         k=i-4
+         if len(cpu_brand[k:i]):
+          rebrand = commands.getoutput("echo -n '" + cpu_brand[k:i] + "' |od -A n -t x4 | sed 's/ //'")
+          logfile.write('VBoxManage setextradata "$1" VBoxInternal/CPUM/HostCPUID/' + e + '/' + r + '  0x' +rebrand + '\t\n')
+         i=i+4
+
 # Check the numbers of CPUs, should be 2 or more
 logfile.write('cpu_count=$(VBoxManage showvminfo --machinereadable "$1" | grep cpus=[0-9]* | sed "s/cpus=//")\t\n')
 logfile.write('if [ $cpu_count -lt "2" ]; then echo "[WARNING] CPU count is less than 2. Consider adding more!"; fi\t\n')
@@ -361,10 +376,18 @@ logfile.write('if [ $memory_size -lt "2048" ]; then echo "[WARNING] Memory size 
 logfile.write('hostint_ip=$(VBoxManage list hostonlyifs | grep IPAddress: | awk {\' print $2 \'})\t\n')
 logfile.write('if [ $hostint_ip == \'192.168.56.1\' ]; then echo "[WARNING] You are using the default IP/IP-range. Consider changing the IP and the range used!"; fi\t\n')
 
-# Check if the legacy paravirtualization interface is being used (Usage of the legacy will mitigate the "cpuid feature" check)
+# Check if the legacy paravirtualization interface is being used (Usage of the legacy interface will mitigate the "cpuid feature" check)
 logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -oi legacy)\t\n')
 logfile.write('if [ -z $virtualization_type ]; then echo "[WARNING] Please switch paravirtualization interface to: legacy!"; fi\t\n')
 
+# Check if audio support is enabled
+logfile.write('audio=$(VBoxManage showvminfo --machinereadable "$1" | grep audio | cut -d "=" -f2 | sed \'s/"//g\')\t\n')
+logfile.write('if [ $audio == "none" ]; then echo "[WARNING] Please consider adding an audio device!"; fi\t\n')
+
+# Check if you have the correct DevManview binary for the target architecture
+logfile.write('devman_arc=$(VBoxManage showvminfo --machinereadable "$1" | grep ostype | cut -d "=" -f2 | grep -o "(.*)" | sed \'s/(//;s/)//;s/-bit//\')\t\n')
+logfile.write('arc_devman=$(file -b DevManView.exe | grep -o \'80386\|64\' | sed \'s/80386/32/\')\t\n')
+logfile.write('if [ $devman_arc != $arc_devman ]; then echo "[WARNING] Please use the DevManView version that coresponds to the guest architecture: $devman_arc "; fi\t\n')
 
 # Done!
 logfile.close()
@@ -454,15 +477,28 @@ logfile.write('@reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Internet Explorer\
 machineGuid = str(uuid.uuid4())
 logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography" /v MachineGuid /t REG_SZ /d "' + machineGuid + '" /f\r\n')
 
-# Microsoft Digital Product ID (ProductId)
+# Microsoft Product ID (ProductId)
 serial = [5,3,7,5]
 o = []
 
 for x in serial:
  o.append("%s" % ''.join(["%s" % random.randint(0, 9) for num in range(0, x)]))
 
-newDigitalProductId = "{0}-{1}-{2}-{3}".format(o[0], o[1], o[2], o[3])
-logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ProductId /t REG_SZ /d "' + newDigitalProductId + '" /f\r\n')
+newProductId = "{0}-{1}-{2}-{3}".format(o[0], o[1], o[2], o[3])
+logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ProductId /t REG_SZ /d "' + newProductId + '" /f\r\n')
+logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Internet Explorer\Registration" /v ProductId /t REG_SZ /d "' + newProductId + '" /f\r\n')
+logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\DefaultProductKey" /v ProductId /t REG_SZ /d "' + newProductId + '" /f\r\n')
+
+# Clear the Product key from the registry (prevents people from stealing it)
+logfile.write('@cscript //B %windir%\system32\slmgr.vbs /cpky\r\n')
+
+# Microsoft Digital Product ID
+hexDigitalProductId = "".join("{:02x}".format(ord(c)) for c in newProductId)
+# Prepend static values
+hexDigitalProductId= "A400000003000000" + hexDigitalProductId
+
+logfile.write('for /f "tokens=2*" %%c in (\'@reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v DigitalProductId\') do set "oldDigitalProductId=%%~d"\r\n')
+logfile.write('set str=%oldDigitalProductId%\r\n set var1=%oldDigitalProductId:~0,62%\r\n set var2=%oldDigitalProductId:~62%\r\n set hexDigitalProductId="' + hexDigitalProductId + '"\r\n @reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v DigitalProductId /t REG_BINARY /d %hexDigitalProductId%%var2% /f\r\n')
 
 # Requires a copy of the DevManView.exe for the target architecture (http://www.nirsoft.net/utils/device_manager_view.html)
 with open("DevManView.exe", "rb") as file:
@@ -474,6 +510,7 @@ for line in s:
 logfile.write('@certutil -decode fernweh.tmp "DevManView.exe"\r\n')
 logfile.write('@DevManView.exe /uninstall "PCI\VEN_80EE&DEV_CAFE"* /use_wildcard\r\n')
 logfile.write('@del DevManView.exe fernweh.tmp\r\n')
+
 
 logfile.close()
 print '[*] Finished: A Windows batch file has been created named:', file_name
