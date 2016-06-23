@@ -1,8 +1,9 @@
 #!/usr/bin/python
 # Mikael,@nsmfoo - blog.prowling.nu
 
-# Tested on Ubuntu 14.04 LTS, using several brands of computers and types..but there is not an guarantee that it will work anyway
+# Tested on Ubuntu 14.04 and 16.04 LTS, using several brands of computers and types..but there is not an guarantee that it will work anyway
 # Prerequisites: python-dmidecode, cd-drive and acpidump: apt-get install python-dmidecode libcdio-utils acpidump
+# Windows binaries: DevManView(32 or 64-bit), Volumeid.exe, a text file with a list of computer/host and one with users.
 
 # Import stuff
 import commands
@@ -12,15 +13,16 @@ import random
 import uuid
 import re
 import time
+import string
 import StringIO
 
 # Check dependencies
-if not (os.path.exists("/usr/bin/cd-drive")) or not (os.path.exists("/usr/bin/acpidump")) or not (os.path.exists("/usr/share/python-dmidecode")) or not (os.path.exists("DevManView.exe")):
- print '[WARNING] Dependencies are missing, please verify that you have installed: cd-drive, acpidump and python-dmidecode and a copy of DevManView.exe in the path of this script'
+if not (os.path.exists("/usr/bin/cd-drive")) or not (os.path.exists("/usr/bin/acpidump")) or not (os.path.exists("/usr/share/python-dmidecode")) or not (os.path.exists("DevManView.exe")) or not (os.path.exists("Volumeid.exe")) or not (os.path.exists("computer.lst")) or not (os.path.exists("user.lst")):
+ print '[WARNING] Dependencies are missing, please verify that you have installed: cd-drive, acpidump and python-dmidecode and a copy of DevManView.exe, VolumeId.exe and computer and user.lst in the path of this script'
  exit()
 
 # Welcome
-print '--- Generate VirtualBox templates to help thwart vm detection - Mikael, @nsmfoo ---'
+print '--- Generate VirtualBox templates to help thwart VM detection and more .. - Mikael, @nsmfoo ---'
 print '[*] Creating VirtualBox modifications ..'
 
 # Randomize serial
@@ -33,12 +35,12 @@ def serial_randomize(start=0, string_length=10):
 dmi_info = {}
 
 try:
-  for v in dmidecode.bios().values():
-    if type(v) == dict and v['dmi_type'] == 0:
+   for v in dmidecode.bios().values():
+     if type(v) == dict and v['dmi_type'] == 0:
         dmi_info['DmiBIOSVendor'] = v['data']['Vendor']
-        dmi_info['DmiBIOSReleaseDate'] = v['data']['Release Date']
         dmi_info['DmiBIOSVersion'] = v['data']['Version']
         biosversion = v['data']['BIOS Revision']
+        dmi_info['DmiBIOSReleaseDate'] = v['data']['Release Date']
 except:
    dmi_info['DmiBIOSReleaseDate'] = v['data']['Relase Date']
 
@@ -421,12 +423,10 @@ else:
 logfile.write('@ECHO OFF\r\n')
 
 # DSDT
-logfile.write('@reg copy HKLM\HARDWARE\ACPI\DSDT\VBOX__ HKLM\HARDWARE\ACPI\DSDT\\' + manu + ' /s /f\r\n')
-logfile.write('@reg delete HKLM\HARDWARE\ACPI\DSDT\VBOX__ /f\r\n')
-
+logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\VBOX__ HKLM\HARDWARE\ACPI\DSDT\\' + manu + ' /s /f\r\n')
+logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\VBOX__ /f\r\n')
 logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___' + ' /s /f\r\n')
 logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS /f\r\n')
-
 logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' /s /f\r\n')
 logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 /f\r\n')
 
@@ -491,7 +491,6 @@ logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\Curren
 
 # Clear the Product key from the registry (prevents people from stealing it)
 logfile.write('@cscript //B %windir%\system32\slmgr.vbs /cpky\r\n')
-
 # Microsoft Digital Product ID
 hexDigitalProductId = "".join("{:02x}".format(ord(c)) for c in newProductId)
 # Prepend static values
@@ -500,18 +499,112 @@ hexDigitalProductId= "A400000003000000" + hexDigitalProductId
 logfile.write('for /f "tokens=2*" %%c in (\'@reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v DigitalProductId\') do set "oldDigitalProductId=%%~d"\r\n')
 logfile.write('set str=%oldDigitalProductId%\r\n set var1=%oldDigitalProductId:~0,62%\r\n set var2=%oldDigitalProductId:~62%\r\n set hexDigitalProductId="' + hexDigitalProductId + '"\r\n @reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v DigitalProductId /t REG_BINARY /d %hexDigitalProductId%%var2% /f\r\n')
 
-# Requires a copy of the DevManView.exe for the target architecture (http://www.nirsoft.net/utils/device_manager_view.html)
+# Requires a copy of the DevManView.exe for the target architecture. Reference: http://www.nirsoft.net/utils/device_manager_view.html
 with open("DevManView.exe", "rb") as file:
     data = file.read()
 s = StringIO.StringIO(data.encode("base64"))
 for line in s:
     logfile.write('(echo ' + line +')>>fernweh.tmp\r\n')
 
-logfile.write('@certutil -decode fernweh.tmp "DevManView.exe"\r\n')
+logfile.write('@certutil -decode fernweh.tmp "DevManView.exe" >nul 2>&1\r\n')
 logfile.write('@DevManView.exe /uninstall "PCI\VEN_80EE&DEV_CAFE"* /use_wildcard\r\n')
 logfile.write('@del DevManView.exe fernweh.tmp\r\n')
 
+# First and rather lame attempt of filling the clipbord buffer with something, to be evolved in future versions. Windows command courtesy of a tweet by @shanselman
+palinka = ''.join(random.choice(string.ascii_lowercase + string.digits + string.ascii_uppercase) for _ in range((random.randint(0,1000))))
+logfile.write('echo ' + palinka + '| clip >nul 2>&1\r\n')
+
+# "first" boot changes, requires a reboot
+
+# Check if this has been done before ..
+waldo_check = """
+ if exist kummerspeck.txt (\r\n
+  del kummerspeck.txt\r\n
+  exit)\r\n"""
+# Write the above to file
+logfile.write(waldo_check + '\r\n')
+
+# Agree on the Volumeid EULA - Reference: https://peter.hahndorf.eu/blog/WorkAroundSysinternalsLicenseP.html
+logfile.write('@reg add HKEY_CURRENT_USER\Software\Sysinternals\VolumeId /v EulaAccepted /t REG_DWORD /d "1" /f\r\n')
+
+# Requires a copy of the VolumeId.exe - Reference: https://technet.microsoft.com/en-us/sysinternals/bb897436.aspx
+with open("Volumeid.exe", "rb") as file:
+    data = file.read()
+s = StringIO.StringIO(data.encode("base64"))
+for line in s:
+    logfile.write('(echo ' + line +')>>ohrwurm.tmp\r\n')
+
+logfile.write('@certutil -decode ohrwurm.tmp "Volumeid.exe" >nul 2>&1\r\n')
+
+# Requires a file with a list of "computer"(host) names - A start would be to use a list from this site: http://www.outpost9.com/files/WordLists.html
+with open("computer.lst", "rb") as file:
+    data = file.read()
+s = StringIO.StringIO(data.encode("base64"))
+for line in s:
+    logfile.write('(echo ' + line +')>>weichei.tmp\r\n')
+
+logfile.write('@certutil -decode weichei.tmp "computer.lst" >nul 2>&1\r\n')
+
+# Requires a file with a list of "user" names - A start would be to use a list from this site: http://www.outpost9.com/files/WordLists.html
+with open("user.lst", "rb") as file:
+    data = file.read()
+s = StringIO.StringIO(data.encode("base64"))
+for line in s:
+    logfile.write('(echo ' + line +')>>backpfeifengesicht.tmp\r\n')
+
+logfile.write('@certutil -decode backpfeifengesicht.tmp "user.lst" >nul 2>&1\r\n')
+
+# Inspired by the following thread: https://groups.google.com/forum/#!topic/alt.msdos.batch.nt/dynzP0pjo9w
+user_computer = """
+ setlocal enabledelayedexpansion\r\n
+ set randomstring=\r\n
+ set s=ABCDEF0123456789\r\n
+ set m=0\r\n
+ :loop\r\n
+ set /a n=%random% %% 16\r\n
+ call set randomstring=%randomstring%%%s:~%n%,1%%\r\n
+ set /a m=m+1\r\n
+ if not "!m!"=="20" goto loop:\r\n
+ set VolID1=%randomstring:~0,4%\r\n
+ set VolID2=%randomstring:~4,8%\r\n
+ set Weltschmerz=c:\r\n
+ set DieWeltschmerz=Volumeid.exe %Weltschmerz% %volid1%-%volid2%\r\n
+
+ call %DieWeltschmerz% >nul 2>&1\r\n
+
+ set /a count=0\r\n
+ for /f "tokens=1delims=:" %%i in ('findstr /n "^" "computer.lst"') do set /a count=%%i\r\n
+ set /a rd=%random%%%count\r\n
+ if %rd% equ 0 (set "skip=") else set "skip=skip=%rd%"\r\n
+ set "found="\r\n
+ for /f "%skip%tokens=1*delims=:" %%i in ('findstr /n "^" "computer.lst"') do if not defined found set "found=%%i"&set "var=%%j"\r\n
+ wmic computersystem where name="%COMPUTERNAME%" call rename name="%var%" >nul 2>&1\r\n
+
+ set /a count=0\r\n
+ for /f "tokens=1delims=:" %%i in ('findstr /n "^" "user.lst"') do set /a count=%%i\r\n
+ set /a rd=%random%%%count\r\n
+ if %rd% equ 0 (set "skip=") else set "skip=skip=%rd%"\r\n
+ set "found="\r\n
+ for /f "%skip%tokens=1*delims=:" %%i in ('findstr /n "^" "user.lst"') do if not defined found set "found=%%i"&set "newuser=%%j"\r\n
+ for /F "tokens=*" %%z in ('wmic computersystem get username ^| find "\"') do set VAR=%%z\r\n
+ for /F "tokens=1-2 delims=\/" %%x in ("%VAR%") do (\r\n
+  for /F "tokens=1-2 delims= " %%a in ("%%y") do (\r\n
+   set oldname=%%a\r\n
+   )\r\n
+ )\r\n
+ wmic useraccount where name="%oldname%" rename %newuser% >nul 2>&1\r\n
+ echo "1" > kummerspeck.txt\r\n
+ )\r\n"""
+
+# Write the above to file
+logfile.write(user_computer + '\r\n')
+# Delete the newly created files
+logfile.write('@del Volumeid.exe ohrwurm.tmp weichei.tmp backpfeifengesicht.tmp user.lst computer.lst \r\n')
+# Removed the EULA registry key
+logfile.write('@reg delete HKEY_CURRENT_USER\Software\Sysinternals\VolumeID /f\r\n')
+logfile.write('@reg delete HKEY_CURRENT_USER\Software\Sysinternals /f\r\n')
+# Reboot to finalize the changes
+logfile.write('shutdown -r\r\n')
 
 logfile.close()
 print '[*] Finished: A Windows batch file has been created named:', file_name
-
