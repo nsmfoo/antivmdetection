@@ -379,8 +379,8 @@ logfile.write('hostint_ip=$(VBoxManage list hostonlyifs | grep IPAddress: | awk 
 logfile.write('if [ $hostint_ip == \'192.168.56.1\' ]; then echo "[WARNING] You are using the default IP/IP-range. Consider changing the IP and the range used!"; fi\t\n')
 
 # Check if the legacy paravirtualization interface is being used (Usage of the legacy interface will mitigate the "cpuid feature" check)
-logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -oi legacy)\t\n')
-logfile.write('if [ -z $virtualization_type ]; then echo "[WARNING] Please switch paravirtualization interface to: legacy!"; fi\t\n')
+logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -i ^paravirtprovider | cut -d "=" -f2 | sed s\'/"//g\')\t\n')
+logfile.write('if [ -z $virtualization_type ]; then echo "[WARNING] Please switch paravirtualization interface to: None!"; fi\t\n')
 
 # Check if audio support is enabled
 logfile.write('audio=$(VBoxManage showvminfo --machinereadable "$1" | grep audio | cut -d "=" -f2 | sed \'s/"//g\')\t\n')
@@ -408,59 +408,47 @@ print '[*] Creating guest based modification file (to be run inside the guest)..
 
 # Write all data to file
 if dmi_info['DmiSystemProduct']:
-    file_name = dmi_info['DmiSystemProduct'].replace(" ", "").replace("/", "_") + '.bat'
+    file_name = dmi_info['DmiSystemProduct'].replace(" ", "").replace("/", "_") + '.ps1'
 else:
-    file_name = dmi_info['DmiChassisType'] + '_' + dmi_info['DmiBoardProduct'] + '.bat'
+    file_name = dmi_info['DmiChassisType'] + '_' + dmi_info['DmiBoardProduct'] + '.ps1'
 
 logfile = file(file_name, 'w+')
 
-# Tested on DELL, Lenovo clients and HP (old) server hardware running Windows natively
+# Tested on DELL, Lenovo clients and HP (old) server hardware, running Windows natively
 if 'DELL' in acpi_list[1]:
       manu = acpi_list[1] + '__'
 else:
   manu = acpi_list[1]
 
-logfile.write('@ECHO OFF\r\n')
-
 # DSDT
-logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\VBOX__ HKLM\HARDWARE\ACPI\DSDT\\' + manu + ' /s /f\r\n')
-logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\VBOX__ /f\r\n')
-logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___' + ' /s /f\r\n')
-logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS /f\r\n')
-logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' /s /f\r\n')
-logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 /f\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\VBOX__ -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\VBOX__ -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___' +  '-Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 -Recurse\r\n')
 
 # FADT
-logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___  /s /f\r\n')
-logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP /f\r\n')
-logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' /s /f\r\n')
-logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 /f\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___ -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
 
-# RSDT - differs between XP and W7
-logfile.write('@reg query HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\\VBOXRSDT > nul 2> nul\r\n')
-# if XP then ..
-logfile.write('if %ERRORLEVEL% equ 0 (\r\n')
-logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\VBOXRSDT HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___  /s /f\r\n')
-logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\VBOXRSDT /f\r\n')
-logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' /s /f\r\n')
-logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 /f\r\n')
-logfile.write(') else (\r\n')
-# if W7 then ..
-logfile.write('@reg copy HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' /s /f\r\n')
-logfile.write('@reg delete HKEY_LOCAL_MACHINE\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 /f\r\n')
-logfile.write(')\r\n')
+# RSDT
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
 
 # SystemBiosVersion - TODO: get real values
-logfile.write('@reg add HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System /v SystemBiosVersion /t REG_MULTI_SZ /d "' + acpi_list[1] + ' - ' + acpi_list[0] + '" /f\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\HARDWARE\DESCRIPTION\System -Name SystemBiosVersion -Value "'+ acpi_list[1] + ' - ' + acpi_list[0] + '" -PropertyType "String" -force\r\n')
+
 # VideoBiosVersion - TODO: get real values
-logfile.write('@reg add HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System /v VideoBiosVersion /t REG_MULTI_SZ /d "' + acpi_list[0] + '" /f\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\HARDWARE\DESCRIPTION\System -Name VideoBiosVersion -Value "' + acpi_list[0] + '" -PropertyType "String" -force\r\n')
+
 # SystemBiosDate
 d_month, d_day, d_year = dmi_info['DmiBIOSReleaseDate'].split('/')
-
 if len(d_year) > 2:
     d_year = d_year[2:]
-
-logfile.write('@reg add HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System /v SystemBiosDate /t REG_MULTI_SZ /d "' + d_month + '/' + d_day + '/' + d_year + '" /f\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\HARDWARE\DESCRIPTION\System -Name SystemBiosDate -Value "' + d_month + '/' + d_day + '/' + d_year + '" -PropertyType "String" -force\r\n')
 
 # OS Install Date (InstallDate)
 format = '%m/%d/%Y %I:%M %p'
@@ -470,141 +458,273 @@ prop = random.random()
 stime = time.mktime(time.strptime(start, format))
 etime = time.mktime(time.strptime(end, format))
 ptime = stime + prop * (etime - stime)
-logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v InstallDate /t REG_DWORD /d "' + hex(int(ptime)) + '" /f\r\n')
-logfile.write('@reg add "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Internet Explorer\SQM" /v InstallDate /t REG_DWORD /d "' + hex(int(ptime)) + '" /f\r\n')
+logfile.write('New-ItemProperty -Path \"HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\" -Name InstallDate -Value "' + hex(int(ptime)) + '" -PropertyType "DWord" -force\r\n')
+logfile.write('New-ItemProperty -Path \"HKCU:\SOFTWARE\Microsoft\Internet Explorer\SQM\" -Name InstallDate -Value "' + hex(int(ptime)) + '" -PropertyType "DWord" -force\r\n')
 
 # MachineGuid
 machineGuid = str(uuid.uuid4())
-logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography" /v MachineGuid /t REG_SZ /d "' + machineGuid + '" /f\r\n')
-
-# Microsoft Product ID (ProductId)
-serial = [5,3,7,5]
-o = []
-
-for x in serial:
- o.append("%s" % ''.join(["%s" % random.randint(0, 9) for num in range(0, x)]))
-
-newProductId = "{0}-{1}-{2}-{3}".format(o[0], o[1], o[2], o[3])
-logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ProductId /t REG_SZ /d "' + newProductId + '" /f\r\n')
-logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Internet Explorer\Registration" /v ProductId /t REG_SZ /d "' + newProductId + '" /f\r\n')
-logfile.write('@reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\DefaultProductKey" /v ProductId /t REG_SZ /d "' + newProductId + '" /f\r\n')
-
-# Clear the Product key from the registry (prevents people from stealing it)
-logfile.write('@cscript //B %windir%\system32\slmgr.vbs /cpky\r\n')
-# Microsoft Digital Product ID
-hexDigitalProductId = "".join("{:02x}".format(ord(c)) for c in newProductId)
-# Prepend static values
-hexDigitalProductId= "A400000003000000" + hexDigitalProductId
-
-logfile.write('for /f "tokens=2*" %%c in (\'@reg query "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v DigitalProductId\') do set "oldDigitalProductId=%%~d"\r\n')
-logfile.write('set str=%oldDigitalProductId%\r\n set var1=%oldDigitalProductId:~0,62%\r\n set var2=%oldDigitalProductId:~62%\r\n set hexDigitalProductId="' + hexDigitalProductId + '"\r\n @reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v DigitalProductId /t REG_BINARY /d %hexDigitalProductId%%var2% /f\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Cryptography -Name MachineGuid -Value "' + machineGuid + '" -PropertyType "String" -force\r\n')
 
 # Requires a copy of the DevManView.exe for the target architecture. Reference: http://www.nirsoft.net/utils/device_manager_view.html
 with open("DevManView.exe", "rb") as file:
     data = file.read()
 s = StringIO.StringIO(data.encode("base64"))
+
+logfile.write('$base64_devmanview = \'')
 for line in s:
-    logfile.write('(echo ' + line +')>>fernweh.tmp\r\n')
+    logfile.write(line)
 
-logfile.write('@certutil -decode fernweh.tmp "DevManView.exe" >nul 2>&1\r\n')
-logfile.write('@DevManView.exe /uninstall "PCI\VEN_80EE&DEV_CAFE"* /use_wildcard\r\n')
-logfile.write('@del DevManView.exe fernweh.tmp\r\n')
+DevManView = """'\r\n
+[IO.File]::WriteAllBytes('DevManView.exe',[System.Convert]::FromBase64String($base64_devmanview))
+$devman = @'
+ ./DevManView.exe /uninstall *"DEV_CAFE"* /use_wildcard
+'@
+Invoke-Expression -Command:$devman\r\n"""
+logfile.write(DevManView)
 
-# First and rather lame attempt of filling the clipbord buffer with something, to be evolved in future versions. Windows command courtesy of a tweet by @shanselman
-palinka = ''.join(random.choice(string.ascii_lowercase + string.digits + string.ascii_uppercase) for _ in range((random.randint(0,1000))))
-logfile.write('echo ' + palinka + '| clip >nul 2>&1\r\n')
+# Second attempt to fill the clipbord buffer with something, will be evolved in future versions. Windows command courtesy of a tweet by @shanselman
+# Check if there is a user supplied list of things to populate the clipboard with
+if (os.path.exists("clipboard_buffer")):
+  with open("clipboard_buffer", "rb") as file:
+    data = file.read()
+  s = StringIO.StringIO(data.encode("base64"))
 
-# "first" boot changes, requires a reboot
+  logfile.write('$base64_clipboard = \'')
+  for line in s:
+    logfile.write(line)
 
+  clipper = """'\r\n
+  [IO.File]::WriteAllBytes('clipboard_buffer',[System.Convert]::FromBase64String($base64_clipboard))
+  $clippy = Get-Random -InputObject (get-content clipboard_buffer)
+  Invoke-Expression 'echo $clippy | clip'
+  """
+  logfile.write(clipper + '\r\n')
+else:
+ print '[Info] Could not find a user supplied file called: clipboard_buffer, a random string will be generated instead'
+ palinka = """
+ [Reflection.Assembly]::LoadWithPartialName("System.Web")
+ $length = Get-Random -minimum 5 -maximum 115
+ $none = Get-Random -minimum 5 -maximum $length
+ $clipboard = [System.Web.Security.Membership]::GeneratePassword($length, $none)
+ Invoke-Expression 'echo $clipboard | clip'
+ """
+ logfile.write(palinka)
+
+##############################################################
+# "First" boot changes, requires reboot in order to finalize
+##############################################################
 # Check if this has been done before ..
 waldo_check = """
- if exist kummerspeck.txt (\r\n
-  del kummerspeck.txt\r\n
-  exit)\r\n"""
-# Write the above to file
+if (Test-Path "kummerspeck.txt") {
+  Remove-Item "kummerspeck.txt"
+  exit
+} \r\n"""
 logfile.write(waldo_check + '\r\n')
 
+# Microsoft Product ID (ProductId)
+serial = [5,3,7,5]
+o = []
+for x in serial:
+ o.append("%s" % ''.join(["%s" % random.randint(0, 9) for num in range(0, x)]))
+newProductId = "{0}-{1}-{2}-{3}".format(o[0], o[1], o[2], o[3])
+
+logfile.write('New-ItemProperty -Path \"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\" -Name ProductId -Value "' + newProductId + '" -PropertyType "String" -force\r\n')
+logfile.write('New-ItemProperty -Path \"HKLM:\SOFTWARE\Microsoft\Internet Explorer\Registration\" -Name ProductId -Value "' + newProductId + '" -PropertyType "String" -force\r\n')
+logfile.write('New-ItemProperty -Path \"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\DefaultProductKey\" -Name ProductId -Value "' + newProductId + '" -PropertyType "String" -force\r\n')
+
+# Clear the Product key from the registry (prevents people from stealing it)
+logfile.write('$slmgr="cscript $ENV:windir\system32\slmgr.vbs /cpky"\r\n')
+logfile.write('iex $slmgr\r\n')
+
+logfile.write('$newProductId = "' + newProductId + '"\r\n')
+
+prodId = """
+$newProductId = $newProductId.ToCharArray()
+
+$convert = ""
+foreach ($x in $newProductId) {
+ $convert += $x -as [int]
+}
+$newNewProductId = $convert -split '(..)' | ? { $_ }
+
+$convertID = @()
+foreach ($x in $newNewProductId) {
+ $convertID += [Convert]::ToString($x,16)
+}
+
+$data = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\DefaultProductKey" -Name DigitalProductId).DigitalProductId
+
+$convertData = ""
+foreach ($x in $data) {
+ $convertData += [Convert]::ToString($x,16)
+}
+
+$con1 = $convertData.Substring(0,62)
+$con2 = $convertData.Substring(62)
+$con2 = $con2 -split '(..)' | ? { $_}
+$static = @('A4','00','00','00','03','00','00','00')
+
+# Finalize
+$hexDigitalProductId = $static + $convertID + $con2
+
+$hexHexDigitalProductId = @()
+foreach ($xxx in $hexDigitalProductId) {
+   $hexHexDigitalProductId += "0x$xxx"
+}
+
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -Name DigitalProductId  -Value ([byte[]] $hexHexDigitalProductId)
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Internet Explorer\Registration" -Name DigitalProductId  -Value ([byte[]] $hexHexDigitalProductId)
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\DefaultProductKey" -Name DigitalProductId  -Value ([byte[]] $hexHexDigitalProductId)
+
 # Agree on the Volumeid EULA - Reference: https://peter.hahndorf.eu/blog/WorkAroundSysinternalsLicenseP.html
-logfile.write('@reg add HKEY_CURRENT_USER\Software\Sysinternals\VolumeId /v EulaAccepted /t REG_DWORD /d "1" /f\r\n')
+New-Item -Path HKCU:\Software\Sysinternals
+New-Item -Path HKCU:\Software\Sysinternals\VolumeId
+New-ItemProperty -Path HKCU:\Software\Sysinternals\VolumeId -Name EulaAccepted -Value "1" -PropertyType "Dword" -force
+
+"""
+logfile.write(prodId +'\r\n')
 
 # Requires a copy of the VolumeId.exe - Reference: https://technet.microsoft.com/en-us/sysinternals/bb897436.aspx
 with open("Volumeid.exe", "rb") as file:
     data = file.read()
 s = StringIO.StringIO(data.encode("base64"))
-for line in s:
-    logfile.write('(echo ' + line +')>>ohrwurm.tmp\r\n')
 
-logfile.write('@certutil -decode ohrwurm.tmp "Volumeid.exe" >nul 2>&1\r\n')
+logfile.write('$base64_volumeid = \'')
+for line in s:
+    logfile.write(line)
+
+logfile.write("\'\r\n[IO.File]::WriteAllBytes('Volumeid.exe',[System.Convert]::FromBase64String($base64_volumeid))\r\n")
 
 # Requires a file with a list of "computer"(host) names - A start would be to use a list from this site: http://www.outpost9.com/files/WordLists.html
 with open("computer.lst", "rb") as file:
     data = file.read()
 s = StringIO.StringIO(data.encode("base64"))
-for line in s:
-    logfile.write('(echo ' + line +')>>weichei.tmp\r\n')
 
-logfile.write('@certutil -decode weichei.tmp "computer.lst" >nul 2>&1\r\n')
+logfile.write('$base64_computer = \'')
+for line in s:
+    logfile.write(line)
+
+logfile.write("\'\r\n[IO.File]::WriteAllBytes('computer.lst',[System.Convert]::FromBase64String($base64_computer))\r\n")
 
 # Requires a file with a list of "user" names - A start would be to use a list from this site: http://www.outpost9.com/files/WordLists.html
 with open("user.lst", "rb") as file:
     data = file.read()
 s = StringIO.StringIO(data.encode("base64"))
+
+logfile.write('$base64_user = \'')
 for line in s:
-    logfile.write('(echo ' + line +')>>backpfeifengesicht.tmp\r\n')
+    logfile.write(line)
 
-logfile.write('@certutil -decode backpfeifengesicht.tmp "user.lst" >nul 2>&1\r\n')
+logfile.write("\'\r\n[IO.File]::WriteAllBytes('user.lst',[System.Convert]::FromBase64String($base64_user))\r\n")
 
-# Inspired by the following thread: https://groups.google.com/forum/#!topic/alt.msdos.batch.nt/dynzP0pjo9w
 user_computer = """
- setlocal enabledelayedexpansion\r\n
- set randomstring=\r\n
- set s=ABCDEF0123456789\r\n
- set m=0\r\n
- :loop\r\n
- set /a n=%random% %% 16\r\n
- call set randomstring=%randomstring%%%s:~%n%,1%%\r\n
- set /a m=m+1\r\n
- if not "!m!"=="20" goto loop:\r\n
- set VolID1=%randomstring:~0,4%\r\n
- set VolID2=%randomstring:~4,8%\r\n
- set Weltschmerz=c:\r\n
- set DieWeltschmerz=Volumeid.exe %Weltschmerz% %volid1%-%volid2%\r\n
+    $result = ""
+    $char_set = "ABCDEF0123456789".ToCharArray()
+    for ($x = 0; $x -lt 8; $x++) {
+     $result += $char_set | Get-Random
+    }
 
- call %DieWeltschmerz% >nul 2>&1\r\n
+    $volid1 = $result.Substring(0,4)
+    $volid2 = $result.Substring(4)
+    $weltschmerz = "c:"
+    $dieweltschmerz = "$weltschmerz $volid1-$volid2"
+    Invoke-Expression "./volumeid.exe $dieweltschmerz"
 
- set /a count=0\r\n
- for /f "tokens=1delims=:" %%i in ('findstr /n "^" "computer.lst"') do set /a count=%%i\r\n
- set /a rd=%random%%%count\r\n
- if %rd% equ 0 (set "skip=") else set "skip=skip=%rd%"\r\n
- set "found="\r\n
- for /f "%skip%tokens=1*delims=:" %%i in ('findstr /n "^" "computer.lst"') do if not defined found set "found=%%i"&set "var=%%j"\r\n
- wmic computersystem where name="%COMPUTERNAME%" call rename name="%var%" >nul 2>&1\r\n
+    $computer = Get-Random -InputObject (get-content computer.lst)
+    (Get-WmiObject Win32_ComputerSystem).Rename($computer)
 
- set /a count=0\r\n
- for /f "tokens=1delims=:" %%i in ('findstr /n "^" "user.lst"') do set /a count=%%i\r\n
- set /a rd=%random%%%count\r\n
- if %rd% equ 0 (set "skip=") else set "skip=skip=%rd%"\r\n
- set "found="\r\n
- for /f "%skip%tokens=1*delims=:" %%i in ('findstr /n "^" "user.lst"') do if not defined found set "found=%%i"&set "newuser=%%j"\r\n
- for /F "tokens=*" %%z in ('wmic computersystem get username ^| find "\"') do set VAR=%%z\r\n
- for /F "tokens=1-2 delims=\/" %%x in ("%VAR%") do (\r\n
-  for /F "tokens=1-2 delims= " %%a in ("%%y") do (\r\n
-   set oldname=%%a\r\n
-   )\r\n
- )\r\n
- wmic useraccount where name="%oldname%" rename %newuser% >nul 2>&1\r\n
- echo "1" > kummerspeck.txt\r\n
- )\r\n"""
+    $user = Get-Random -InputObject (get-content user.lst)
+    $current_user = $ENV:username
+    (Get-WmiObject Win32_UserAccount -Filter "Name='$current_user'").Rename($user)
 
-# Write the above to file
+    # Add waldo file
+    New-Item kummerspeck.txt -type file
+    \r\n"""
 logfile.write(user_computer + '\r\n')
-# Delete the newly created files
-logfile.write('@del Volumeid.exe ohrwurm.tmp weichei.tmp backpfeifengesicht.tmp user.lst computer.lst \r\n')
-# Removed the EULA registry key
-logfile.write('@reg delete HKEY_CURRENT_USER\Software\Sysinternals\VolumeID /f\r\n')
-logfile.write('@reg delete HKEY_CURRENT_USER\Software\Sysinternals /f\r\n')
-# Reboot to finalize the changes
-logfile.write('shutdown -r\r\n')
+
+# Chunk of Powershell code connected to the creation of random files and the randomization of the background image
+ps_blob = """
+# Pop-up
+ [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+ [System.Windows.Forms.MessageBox]::Show("Before you continue, please make sure that you have disabled 'Delete File confirmation dialog' (Right-click Recycle Bin -> Properties)")
+# RandomDate function
+ function RandomDate {
+ [DateTime]$mindate = "1/1/2006"
+ [DateTime]$maxdate = [DateTime]::Now
+ $randomdate = new-object random
+ $randomticks = [Convert]::ToInt64( ($maxdate.Ticks * 1.0 - $mindate.Ticks * 1.0 ) * $randomdate.NextDouble() + $mindate.Ticks * 1.0)
+ $newly = new-object DateTime($randomticks)
+ return $newly.ToShortDateString() +' ' + $newly.ToShortTimeString()
+ }
+# Generate files
+function GenFiles([string]$status) {
+ $ext = Get-Random -input ".pdf",".txt",".docx",".doc",".xls", ".xlsx",".zip",".png",".jpg", ".jpeg", ".gif", ".bmp", ".html", ".htm", ".ppt", ".pptx"
+ $namely = Get-Random -InputObject (get-content computer.lst)
+ $location = Get-Random -input "$ENV:userprofile\Desktop\\", "$ENV:userprofile\Documents\\", "$ENV:homedrive\\", "$ENV:userprofile\Downloads\\", "$ENV:userprofile\Pictures\\"
+ $length = Get-Random -minimum 300 -maximum 4534350
+ $buffer = New-Object Byte[] $length
+ New-Item $location$namely$ext -type file -value $buffer
+ Get-ChildItem $location$namely$ext | % {$_.CreationTime = RandomDate }
+ Get-ChildItem $location$namely$ext | % {$_.LastWriteTime = RandomDate }
+
+ if ($status -eq "delete"){
+# Now thrown them away!
+  $shell = new-object -comobject "Shell.Application"
+  $item = $shell.Namespace(0).ParseName("$location$namely$ext")
+  $item.InvokeVerb("delete")
+  }
+}
+
+# Generate files and then throw then away
+ $amount = Get-Random -minimum 10 -maximum 30
+  for ($x=0; $x -le $amount; $x++) {
+   GenFiles delete
+ }
+
+# Generate files, but these we keep
+ $amount = Get-Random -minimum 15 -maximum 45
+  for ($x=0; $x -le $amount; $x++) {
+   GenFiles
+ }
+# Set new background image (will only be visible after reboot)
+ $image = Get-ChildItem -recurse c:\Windows\Web\Wallpaper -name -include *.jpg | Get-Random -Count 1
+ set-itemproperty -path "HKCU:Control Panel\Desktop" -name WallPaper -value C:\Windows\Web\Wallpaper\$image\r\n """
+
+logfile.write(ps_blob + '\r\n')
+
+# Associate file extensions. Reference: https://www.proofpoint.com/us/threat-insight/post/massive-adgholas-malvertising-campaigns-use-steganography-and-file-whitelisting-to-hide-in-plain-sight
+# Feel free to associate the file extensions with something else then Windows Media Player ..
+assocblob = """
+$assoc_ext = @('.divx=WMP11.AssocFile.WAV','.mkv=WMP11.AssocFile.WAV','.m4p=WMP11.AssocFile.WAV','.skype=WMP11.AssocFile.WAV','.flac=WMP11.AssocFile.WAV','.psd=WMP11.AssocFile.WAV','.torrent=WMP11.AssocFile.WAV')
+$cmd = 'cmd /c'
+$associ = 'assoc'
+
+foreach ($z in $assoc_ext) {
+ Invoke-Expression $cmd$associ$z
+}
+"""
+logfile.write(assocblob + '\r\n')
+
+# De-associate file extensions. Reference: https://www.proofpoint.com/us/threat-insight/post/massive-adgholas-malvertising-campaigns-use-steganography-and-file-whitelisting-to-hide-in-plain-sight
+# Disabled by default in this version, enable if you wish
+#assocblob2 = """
+#$assoc_remove = @('.py=','.saz=','.pcap=,'.chls=')
+#$cmd = 'cmd /c'
+#$associ 'assoc'
+#foreach ($z in $assoc_remove) {
+# Invoke-Expression $cmd$associ$z
+#}
+#"""
+#logfile.write(assocblob2 + '\r\n')
+
+# Sanitize
+logfile.write('Remove-Item Volumeid.exe, user.lst, computer.lst, DevManView.exe\r\n')
+logfile.write('Remove-Item -Path HKCU:\Software\Sysinternals\VolumeID -Recurse\r\n')
+logfile.write('Remove-Item -Path HKCU:\Software\Sysinternals -Recurse\r\n')
+# Reboot notification
+logfile.write('[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")\r\n')
+logfile.write('[System.Windows.Forms.MessageBox]::Show("The computer needs to reboot")\r\n')
+logfile.write('Restart-Computer\r\n')
 
 logfile.close()
-print '[*] Finished: A Windows batch file has been created named:', file_name
+print '[*] Finished: A Powershell file has been created, named:', file_name
