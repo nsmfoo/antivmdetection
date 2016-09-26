@@ -423,7 +423,7 @@ else:
 # DSDT
 logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\VBOX__ -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\VBOX__ -Recurse\r\n')
-logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___' +  '-Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___' +  ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -Recurse\r\n')
 logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 -Recurse\r\n')
