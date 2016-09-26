@@ -380,7 +380,7 @@ logfile.write('if [ $hostint_ip == \'192.168.56.1\' ]; then echo "[WARNING] You 
 
 # Check if the legacy paravirtualization interface is being used (Usage of the legacy interface will mitigate the "cpuid feature" check)
 logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -i ^paravirtprovider | cut -d "=" -f2 | sed s\'/"//g\')\t\n')
-logfile.write('if [ -z $virtualization_type ]; then echo "[WARNING] Please switch paravirtualization interface to: None!"; fi\t\n')
+logfile.write('if [ ! $virtualization_type == \'none\' ]; then echo "[WARNING] Please switch paravirtualization interface to: None!"; fi\t\n')
 
 # Check if audio support is enabled
 logfile.write('audio=$(VBoxManage showvminfo --machinereadable "$1" | grep audio | cut -d "=" -f2 | sed \'s/"//g\')\t\n')
