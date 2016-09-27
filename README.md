@@ -29,7 +29,12 @@ The main script will create the following files:
 * Move the batch script to the newly installed guest.
 * Run the batch script inside the guest. Remember that most of the settings that gets modified, are reverted after each reboot. So make it run at boot if needed. 
     + As of version 0.1.4, some applied settings will require a reboot. So run the batch script once, the guest will be rebooted. Then run the script once again to finalize the setup.  
-* Before you apply the batch script inside the guest, please disable UAC (reboot required) otherwise you will not be able to modify the registry with the script
+* Before you apply the batch script inside the guest, please disable UAC (reboot required) otherwise you will not be able to modify the registry with the script.
++ If applied correctly, a Pafish run will result in this (no need to modify Virtualbox):
+
+![alt text](vmdetect0.1.5.png "Description goes here")
+
++ Please note, that this script does other things that is not covered by Pafish
 
 #Version History:
 * 0.1.5:
