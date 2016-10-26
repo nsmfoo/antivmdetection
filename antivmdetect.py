@@ -315,7 +315,6 @@ if os.path.islink('/dev/cdrom'):
         logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/ahci/0/Config/Port1/' + k + '\t\'' + v + '\'\n')
  logfile.write('fi\n')
 
-
 # Get and write DSDT image to file
 print '[*] Creating a DSDT file...'
 if dmi_info['DmiSystemProduct']:
@@ -329,8 +328,13 @@ else:
     logfile.write('VBoxManage setextradata "$1" "VBoxInternal/Devices/acpi/0/Config/CustomTable"\t' + os.getcwd() + '/' + dsdt_name + '\n')
 
 acpi_misc = commands.getoutput('acpidump -s | grep DSDT | grep -o "\(([A-Za-z0-9].*)\)" | tr -d "()"')
-acpi_list = acpi_misc.split(' ')
-acpi_list = filter(None, acpi_list)
+if "option requires" in acpi_misc:
+    acpi_error = commands.getoutput("lsb_release -r | awk {' print $2 '} ")
+    print "The version of acpidump included in", acpi_error, 'is not supported'
+    exit()
+else:
+    acpi_list = acpi_misc.split(' ')
+    acpi_list = filter(None, acpi_list)
 
 logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiOemId\t\'' + acpi_list[1] + '\'\n')
 logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiCreatorId\t\'string:' + acpi_list[4] + '\'\n')
@@ -344,7 +348,6 @@ big_mac = mac_seed + "%02x:%02x:%02x" % (
     random.randint(0, 255),
 )
 le_big_mac = re.sub(':', '', big_mac)
-# The last thing!
 logfile.write('VBoxManage modifyvm "$1" --macaddress1\t' + le_big_mac + '\n')
 
 # Copy and set the CPU brand string
@@ -370,7 +373,7 @@ while i<=47:
 logfile.write('cpu_count=$(VBoxManage showvminfo --machinereadable "$1" | grep cpus=[0-9]* | sed "s/cpus=//")\t\n')
 logfile.write('if [ $cpu_count -lt "2" ]; then echo "[WARNING] CPU count is less than 2. Consider adding more!"; fi\t\n')
 
-# Check the set memory size. If it's less them 2GB notify user (soft warning).
+# Check the set memory size. If it's less them 2GB notify user
 logfile.write('memory_size=$(VBoxManage showvminfo --machinereadable "$1" | grep memory=[0-9]* | sed "s/memory=//")\t\n')
 logfile.write('if [ $memory_size -lt "2048" ]; then echo "[WARNING] Memory size is 2GB or less. Consider adding more memory!"; fi\t\n')
 
@@ -378,7 +381,7 @@ logfile.write('if [ $memory_size -lt "2048" ]; then echo "[WARNING] Memory size 
 logfile.write('hostint_ip=$(VBoxManage list hostonlyifs | grep IPAddress: | awk {\' print $2 \'})\t\n')
 logfile.write('if [ $hostint_ip == \'192.168.56.1\' ]; then echo "[WARNING] You are using the default IP/IP-range. Consider changing the IP and the range used!"; fi\t\n')
 
-# Check if the legacy paravirtualization interface is being used (Usage of the legacy interface will mitigate the "cpuid feature" check)
+# Check witch paravirtualization interface is being used (Setting it to "none" will mitigate the "cpuid feature" check)
 logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -i ^paravirtprovider | cut -d "=" -f2 | sed s\'/"//g\')\t\n')
 logfile.write('if [ ! $virtualization_type == \'none\' ]; then echo "[WARNING] Please switch paravirtualization interface to: None!"; fi\t\n')
 
@@ -497,6 +500,7 @@ if (os.path.exists("clipboard_buffer")):
   [IO.File]::WriteAllBytes('clipboard_buffer',[System.Convert]::FromBase64String($base64_clipboard))
   $clippy = Get-Random -InputObject (get-content clipboard_buffer)
   Invoke-Expression 'echo $clippy | clip'
+  Remove-Item clipboard_buffer
   """
   logfile.write(clipper + '\r\n')
 else:
@@ -510,13 +514,39 @@ else:
  """
  logfile.write(palinka)
 
-##############################################################
-# "First" boot changes, requires reboot in order to finalize
-##############################################################
+# Start notepad with random files so that the system looks more homely(?), could easily be extended to other applications
+
+langered = """
+$location = "$ENV:userprofile\Desktop\", "$ENV:userprofile\Documents\", "$ENV:homedrive\", "$ENV:userprofile\Downloads\", "$ENV:userprofile\Pictures\"
+
+$notepad = @()
+foreach ($x in $location){
+ Get-ChildItem $x | where {$_.extension -eq ".txt"} | % {
+     $notepad += $_.FullName
+ }
+}
+$notepad = $notepad | Sort-Object -unique {Get-Random}
+
+$a = 0
+foreach ($knackered in $notepad) {
+    if ($a -le 3) {
+     Start-Process 'C:\windows\system32\\notepad.exe' -ArgumentList $knackered -WindowStyle Minimized
+     $a++
+     }
+}
+"""
+logfile.write(langered)
+
+#################################################################
+# "First" boot changes, requires reboot in order to be finalized
+################################################################
 # Check if this has been done before ..
 waldo_check = """
-if (Test-Path "kummerspeck.txt") {
-  Remove-Item "kummerspeck.txt"
+if (Test-Path "kummerspeck") {
+  Remove-Item "kummerspeck"
+  Remove-Item "DevManView.exe"
+  [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+  [System.Windows.Forms.MessageBox]::Show("You are now ready to infected!")
   exit
 } \r\n"""
 logfile.write(waldo_check + '\r\n')
@@ -638,7 +668,7 @@ user_computer = """
     (Get-WmiObject Win32_UserAccount -Filter "Name='$current_user'").Rename($user)
 
     # Add waldo file
-    New-Item kummerspeck.txt -type file
+    New-Item kummerspeck -type file
     \r\n"""
 logfile.write(user_computer + '\r\n')
 
@@ -647,25 +677,27 @@ ps_blob = """
 # Pop-up
  [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
  [System.Windows.Forms.MessageBox]::Show("Before you continue, please make sure that you have disabled 'Delete File confirmation dialog' (Right-click Recycle Bin -> Properties)")
+
 # RandomDate function
- function RandomDate {
- [DateTime]$mindate = "1/1/2006"
- [DateTime]$maxdate = [DateTime]::Now
- $randomdate = new-object random
- $randomticks = [Convert]::ToInt64( ($maxdate.Ticks * 1.0 - $mindate.Ticks * 1.0 ) * $randomdate.NextDouble() + $mindate.Ticks * 1.0)
- $newly = new-object DateTime($randomticks)
- return $newly.ToShortDateString() +' ' + $newly.ToShortTimeString()
- }
+function RandomDate {
+  $days = Get-Random -minimum 300 -maximum 2190
+  $hours = Get-Random -minimum 5 -maximum 24
+  $minutes = Get-Random -minimum 20 -maximum 60
+  $seconds = Get-Random -minimum 12 -maximum 60
+  return $days,$hours,$minutes,$seconds
+}
+
 # Generate files
 function GenFiles([string]$status) {
+ $TimeStamp = RandomDate
  $ext = Get-Random -input ".pdf",".txt",".docx",".doc",".xls", ".xlsx",".zip",".png",".jpg", ".jpeg", ".gif", ".bmp", ".html", ".htm", ".ppt", ".pptx"
  $namely = Get-Random -InputObject (get-content computer.lst)
  $location = Get-Random -input "$ENV:userprofile\Desktop\\", "$ENV:userprofile\Documents\\", "$ENV:homedrive\\", "$ENV:userprofile\Downloads\\", "$ENV:userprofile\Pictures\\"
  $length = Get-Random -minimum 300 -maximum 4534350
  $buffer = New-Object Byte[] $length
  New-Item $location$namely$ext -type file -value $buffer
- Get-ChildItem $location$namely$ext | % {$_.CreationTime = RandomDate }
- Get-ChildItem $location$namely$ext | % {$_.LastWriteTime = RandomDate }
+ Get-ChildItem $location$namely$ext | % {$_.CreationTime = ((get-date).AddDays(-$TimeStamp[0]).AddHours(-$TimeStamp[1]).AddMinutes(-$TimeStamp[2]).AddSeconds(-$TimeStamp[3])) }
+ Get-ChildItem $location$namely$ext | % {$_.LastWriteTime = ((get-date).AddDays(-$TimeStamp[0]).AddHours(-$TimeStamp[1]).AddMinutes(-$TimeStamp[2]).AddSeconds(-$TimeStamp[3])) }
 
  if ($status -eq "delete"){
 # Now thrown them away!
@@ -675,7 +707,7 @@ function GenFiles([string]$status) {
   }
 }
 
-# Generate files and then throw then away
+# Generate files and then throw them away
  $amount = Get-Random -minimum 10 -maximum 30
   for ($x=0; $x -le $amount; $x++) {
    GenFiles delete
@@ -688,7 +720,7 @@ function GenFiles([string]$status) {
  }
 # Set new background image (will only be visible after reboot)
  $image = Get-ChildItem -recurse c:\Windows\Web\Wallpaper -name -include *.jpg | Get-Random -Count 1
- set-itemproperty -path "HKCU:Control Panel\Desktop" -name WallPaper -value C:\Windows\Web\Wallpaper\$image\r\n """
+ Set-Itemproperty -path "HKCU:Control Panel\Desktop" -name WallPaper -value C:\Windows\Web\Wallpaper\$image\r\n """
 
 logfile.write(ps_blob + '\r\n')
 

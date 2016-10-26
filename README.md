@@ -32,11 +32,19 @@ The main script will create the following files:
 * Before you apply the batch script inside the guest, please disable UAC (reboot required) otherwise you will not be able to modify the registry with the script.
 + If applied correctly, a Pafish run will result in this (no need to modify Virtualbox):
 
-![alt text](vmdetect0.1.5.png "Description goes here")
+![alt text](vmdetect0.1.5.png "VMDetect 1.5.x")
 
 + Please note, that this script does other things that is not covered by Pafish
 
 #Version History:
+
+* 0.1.6:    
+    + Added a pop-up after the second run, to make it more clear that you are good to go
+    + Added a function that spawns a few instances of notepad, this feature will be extended in future versions
+    + Reworked the RandomDate function, thanks to @Antelox for making me aware of the issue with the old one (#8) 
+    + Acpidump shipped with older versions of Ubuntu, does not support the "-s" switch. This is now handled with an error message. Thanks to @Antelox for this issue (#7) 
+    + Devmanview.exe was not removed after the second run, fixed
+
 * 0.1.5:
     + Added support for associating and de-associating (default disabled) file extensions. Reference: https://www.proofpoint.com/us/threat-insight/post/massive-adgholas-malvertising-campaigns-use-steganography-and-file-whitelisting-to-hide-in-plain-sight
     + Added support for user supplied clipboard buffer. If not present a random string will be generated. Fill the file with Honeytokens of your choice 
