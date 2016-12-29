@@ -253,7 +253,7 @@ except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
 
-logfile.write('controller=`VBoxManage showvminfo $1 --machinereadable | grep SATA`\n')
+logfile.write('controller=`VBoxManage showvminfo "$1" --machinereadable | grep SATA`\n')
 
 logfile.write('if [[ -z "$controller" ]]; then\n')
 for k, v in disk_dmi.iteritems():
