@@ -2,7 +2,7 @@
 
 #Background:
 
-A script to help you create templates which you can use with VirtualBox to make VM detection harder.
+A script to help you create templates, which you can use with VirtualBox to make VM detection harder.
 
 My first post on the subject was in 2012 and have after that been updated at random times. The blog format might have not been the best way of publishing the information and some people did make nice and "easy to apply" script based on the content.
 
@@ -30,13 +30,22 @@ The main script will create the following files:
 * Run the batch script inside the guest. Remember that most of the settings that gets modified, are reverted after each reboot. So make it run at boot if needed. 
     + As of version 0.1.4, some applied settings will require a reboot. So run the batch script once, the guest will be rebooted. Then run the script once again to finalize the setup.  
 * Before you apply the batch script inside the guest, please disable UAC (reboot required) otherwise you will not be able to modify the registry with the script.
-+ If applied correctly, a Pafish run will result in this (no need to modify Virtualbox):
+* For Windows 10 users:  run the PS script as an administrator (right-click on the cmd.exe -> run as admin, navigate to the PS script and execute)
++ If applied correctly, a Pafish run will result in this (no need to modify Virtualbox). 
 
 ![alt text](vmdetect0.1.5.png "VMDetect 1.5.x")
 
-+ Please note, that this script does other things that is not covered by Pafish
++ Please note, that this script does other things that is not covered by Pafish (for example W10 artifacts)
 
 #Version History:
+
+* 0.1.7:
+    + Windows 10 is now supported (feedback welcome)
+    + Several new artifacts "corrected" for W10 installations 
+    + New dependency: mesa-utils
+    + Merged bug fix from @Fullmetal5 (#10)
+    + Misc code fix 
+    + Updated the readme
 
 * 0.1.6:    
     + Added a pop-up after the second run, to make it more clear that you are good to go

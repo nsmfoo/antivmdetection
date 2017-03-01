@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # Mikael,@nsmfoo - blog.prowling.nu
 
-# Tested on Ubuntu 14.04 and 16.04 LTS, using several brands of computers and types..but there is not an guarantee that it will work anyway
-# Prerequisites: python-dmidecode, cd-drive and acpidump: apt-get install python-dmidecode libcdio-utils acpidump
+# Tested on Ubuntu 14.04 and 16.04 LTS, using several brands of computers and types..but there is no guarantee that it will work anyway..
+# Prerequisites: python-dmidecode, cd-drive and acpidump: apt-get install python-dmidecode libcdio-utils acpidump mesa-utils
 # Windows binaries: DevManView(32 or 64-bit), Volumeid.exe, a text file with a list of computer/host and one with users.
 
 # Import stuff
@@ -13,13 +13,14 @@ import random
 import uuid
 import re
 import time
-import string
 import StringIO
 
 # Check dependencies
-if not (os.path.exists("/usr/bin/cd-drive")) or not (os.path.exists("/usr/bin/acpidump")) or not (os.path.exists("/usr/share/python-dmidecode")) or not (os.path.exists("DevManView.exe")) or not (os.path.exists("Volumeid.exe")) or not (os.path.exists("computer.lst")) or not (os.path.exists("user.lst")):
- print '[WARNING] Dependencies are missing, please verify that you have installed: cd-drive, acpidump and python-dmidecode and a copy of DevManView.exe, VolumeId.exe and computer and user.lst in the path of this script'
- exit()
+dependencies = ["/usr/bin/cd-drive", "/usr/bin/acpidump", "/usr/share/python-dmidecode", "DevManView.exe", "Volumeid.exe", "computer.lst", "user.lst", "/usr/bin/glxinfo"]
+for dep in dependencies:
+    if not (os.path.exists(dep)):
+      print "[WARNING] Dependencies are missing, please verify that you have installed:", dep
+      exit()
 
 # Welcome
 print '--- Generate VirtualBox templates to help thwart VM detection and more .. - Mikael, @nsmfoo ---'
@@ -423,6 +424,9 @@ if 'DELL' in acpi_list[1]:
 else:
   manu = acpi_list[1]
 
+# OS version - W7 or W10
+logfile.write('$version = (Get-WmiObject win32_operatingsystem).version\r\n')
+
 # DSDT
 logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\VBOX__ -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\VBOX__ -Recurse\r\n')
@@ -432,14 +436,58 @@ logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 -Recurse\r\n')
 
 # FADT
+logfile.write('if ($version -like \'10.0*\') {\r\n')
+logfile.write('$oddity = "HKLM:\HARDWARE\ACPI\FADT\\" + (Get-ChildItem "HKLM:\HARDWARE\ACPI\FADT" -Name)\r\n')
+logfile.write('Invoke-Expression ("Copy-Item -Path " + $oddity + " -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu +  ' -Recurse")\r\n')
+logfile.write('Invoke-Expression ("Remove-Item -Path " + $oddity + " -Recurse")\r\n')
+
 logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___ -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Recurse\r\n')
 logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
+logfile.write('}else{\r\n')
+#Win7
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___ -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
+logfile.write('}\r\n')
 
 # RSDT
+logfile.write('if ($version -like \'10.0*\') {\r\n')
+logfile.write('$noproblem = "HKLM:\HARDWARE\ACPI\RSDT\\" + (Get-ChildItem "HKLM:\HARDWARE\ACPI\RSDT" -Name)\r\n')
+logfile.write('Invoke-Expression ("Copy-Item -Path " + $noproblem + " -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu +  ' -Recurse")\r\n')
+logfile.write('Invoke-Expression ("Remove-Item -Path " + $noproblem + " -Recurse")\r\n')
+logfile.write('$cinnamon = "HKLM:\HARDWARE\ACPI\RSDT\\" + (Get-ChildItem "HKLM:\HARDWARE\ACPI\RSDT" -Name)\r\n')
+logfile.write('$the_mero = "HKLM:\HARDWARE\ACPI\RSDT\\" + (Get-ChildItem "HKLM:\HARDWARE\ACPI\RSDT" -Name) + "\\" + (Get-ChildItem $cinnamon -Name)\r\n')
+logfile.write('Invoke-Expression ("Copy-Item -Path " + $the_mero + " -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu +  '\\' + acpi_list[2] + '___ -Recurse")\r\n')
+logfile.write('Invoke-Expression ("Remove-Item -Path " + $the_mero + " -Recurse")\r\n')
 logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
+
+logfile.write('}else{\r\n')
+#Win7
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
+logfile.write('}\r\n')
+
+# W10 specific settings:
+logfile.write('if ($version  -like \'10.0*\') {\r\n')
+# SDDT .. very beta ..
+new_SDDT1 = commands.getoutput("sudo acpidump -s | grep SSDT | grep -o '\(([A-Za-z0-9].*)\)' | grep '00001000' | head -n 1 | awk {' print $2 '}")
+new_SDDT2 = commands.getoutput("sudo acpidump -s | grep SSDT | grep -o '\(([A-Za-z0-9].*)\)' | grep '00001000' | head -n 1 | awk {' print $3 '}")
+new_SDDT3 = commands.getoutput("sudo acpidump -s | grep SSDT | grep -o '\(([A-Za-z0-9].*)\)' | grep '00001000' | head -n 1 | awk {' print $4 '}")
+
+# Check if the key is present.. apparently it is not always the case? Feedback welcome
+logfile.write('$check_exist = (Test-Path HKLM:\HARDWARE\ACPI\SSDT)\r\n')
+logfile.write('if ($check_exist) {\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\SSDT\VBOX__ -Destination HKLM:\HARDWARE\ACPI\SSDT\\' + new_SDDT1 + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\SSDT\VBOX__ -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\SSDT\\' + new_SDDT1 + '\VBOXCPUT -Destination HKLM:\HARDWARE\ACPI\SSDT\\' + new_SDDT1 + '\\' + new_SDDT2 + '___ -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\SSDT\\' + new_SDDT1 + '\VBOXCPUT -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\SSDT\\' + new_SDDT1 + '\\' + new_SDDT2 + '___\\00000002 -Destination HKLM:\HARDWARE\ACPI\SSDT\\' + new_SDDT1 + '\\' + new_SDDT2 + '___\\' + new_SDDT3 + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\SSDT\\' + new_SDDT1 + '\\' + new_SDDT2 + '___\\00000002 -Recurse\r\n')
+logfile.write('}\r\n}\r\n')
 
 # SystemBiosVersion - TODO: get real values
 logfile.write('New-ItemProperty -Path HKLM:\HARDWARE\DESCRIPTION\System -Name SystemBiosVersion -Value "'+ acpi_list[1] + ' - ' + acpi_list[0] + '" -PropertyType "String" -force\r\n')
@@ -467,6 +515,52 @@ logfile.write('New-ItemProperty -Path \"HKCU:\SOFTWARE\Microsoft\Internet Explor
 # MachineGuid
 machineGuid = str(uuid.uuid4())
 logfile.write('New-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Cryptography -Name MachineGuid -Value "' + machineGuid + '" -PropertyType "String" -force\r\n')
+
+# W10 specific settings:
+logfile.write('if ($version  -like \'10.0*\') {\r\n')
+# DacType
+new_dactype1 = commands.getoutput("lspci | grep -i VGA | cut -d ':' -f3 | awk {' print $1 '}")
+new_dactype2 = commands.getoutput("lspci | grep -i VGA | cut -d ':' -f3 | awk {' print $2 '}")
+
+logfile.write('$DacType = ((Get-ItemProperty -path \'HKLM:\SYSTEM\CurrentControlSet\Control\Video\*\\0000\')."HardwareInformation.DacType")\r\n')
+logfile.write('if ($DacType -eq \'Oracle Corporation\') {\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Video\*\\0000 -Name HardwareInformation.DacType -Value "' + new_dactype1 + " " + new_dactype2 + '" -PropertyType "String" -force }\r\n')
+
+logfile.write('$DacType = ((Get-ItemProperty -path \'HKLM:\SYSTEM\ControlSet001\Control\Class\*\\0016\')."HardwareInformation.DacType")\r\n')
+logfile.write('if ($DacType -eq \'Oracle Corporation\') {\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\SYSTEM\ControlSet001\Control\Class\*\\0016 -Name HardwareInformation.DacType -Value "' + new_dactype1 + " " + new_dactype2 + '" -PropertyType "String" -force }\r\n')
+
+# ChipType
+new_chiptype1 = commands.getoutput("glxinfo -B | grep 'OpenGL renderer string' | cut -d ':' -f2 | sed  's/Mesa DRI//' | awk {' print $1 '} ")
+new_chiptype2 = commands.getoutput("glxinfo -B | grep 'OpenGL renderer string' | cut -d ':' -f2 | sed  's/Mesa DRI//' | awk {' print $2 '} ")
+
+if 'Error: unable to open display' in new_chiptype1:
+    print "[WARNING] Unable to retrieve correct information! You are probably using a server distribution. Will add some semi correct data ... "
+    new_chiptype1 = commands.getoutput("lshw -c video | grep -i vendor: | awk ' { print  $2 } '")
+    new_chiptype2 = commands.getoutput("lshw -c video | grep -i vendor: | awk ' { print  $3 } '")
+
+# Having access to only a limited amount of native Windows 10 installed hardware, I have at least noted that W10 reports Sandybridge/Ivybridge for systems that gxlinfo reports being equipped with Ivybridge.
+if 'Ivybridge' in new_chiptype2:
+    new_chiptype2 = 'Sandybridge/Ivybridge'
+
+logfile.write('$ChipType = ((Get-ItemProperty -path HKLM:\SYSTEM\CurrentControlSet\Control\Video\*\\0000)."HardwareInformation.ChipType")\r\n')
+logfile.write('if ($ChipType -eq \'VirtualBox VESA BIOS\') {\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Video\*\\0000 -Name HardwareInformation.ChipType -Value "' + new_chiptype1 + " " + new_chiptype2 + '" -PropertyType "String" -force }\r\n')
+
+logfile.write('$ChipType = ((Get-ItemProperty -path HKLM:\SYSTEM\ControlSet001\Control\Class\*\\0016)."HardwareInformation.ChipType")\r\n')
+logfile.write('if ($ChipType -eq \'VirtualBox VESA BIOS\') {\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\SYSTEM\ControlSet001\Control\Class\*\\0016 -Name HardwareInformation.ChipType -Value "' + new_chiptype1 + " " + new_chiptype2 + '" -PropertyType "String" -force }\r\n')
+
+# BiosString
+logfile.write('$BiosString = ((Get-ItemProperty -path HKLM:\SYSTEM\CurrentControlSet\Control\Video\*\\0000)."HardwareInformation.BiosString")\r\n')
+logfile.write('if ($BiosString -eq \'Oracle VM VirtualBox VBE Adapte\') {\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Video\*\\0000 -Name HardwareInformation.BiosString -Value "' + new_chiptype1 + " " + new_chiptype2 + '" -PropertyType "String" -force }\r\n')
+
+logfile.write('$BiosString = ((Get-ItemProperty -path HKLM:\SYSTEM\ControlSet001\Control\Class\*\\0016)."HardwareInformation.BiosString")\r\n')
+logfile.write('if ($BiosString -eq \'Oracle VM VirtualBox VBE Adapte\') {\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\SYSTEM\ControlSet001\Control\Class\*\\0016 -Name HardwareInformation.BiosString -Value "' + new_chiptype1 + " " + new_chiptype2 + '" -PropertyType "String" -force }\r\n')
+
+logfile.write('}\r\n')
 
 # Requires a copy of the DevManView.exe for the target architecture. Reference: http://www.nirsoft.net/utils/device_manager_view.html
 with open("DevManView.exe", "rb") as file:
@@ -636,7 +730,7 @@ for line in s:
 
 logfile.write("\'\r\n[IO.File]::WriteAllBytes('computer.lst',[System.Convert]::FromBase64String($base64_computer))\r\n")
 
-# Requires a file with a list of "user" names - A start would be to use a list from this site: http://www.outpost9.com/files/WordLists.html
+# Requires a file with a list of "usernames" - A start would be to use a list from this site: http://www.outpost9.com/files/WordLists.html
 with open("user.lst", "rb") as file:
     data = file.read()
 s = StringIO.StringIO(data.encode("base64"))
@@ -675,9 +769,11 @@ logfile.write(user_computer + '\r\n')
 # Chunk of Powershell code connected to the creation of random files and the randomization of the background image
 ps_blob = """
 # Pop-up
- [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
- [System.Windows.Forms.MessageBox]::Show("Before you continue, please make sure that you have disabled 'Delete File confirmation dialog' (Right-click Recycle Bin -> Properties)")
-
+ # Windows 10 (Enterprise..) does not ask for confirmation by default
+ if ($version -notlike '10.0*') {
+  [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+  [System.Windows.Forms.MessageBox]::Show("Before you continue, please make sure that you have disabled 'Delete File confirmation dialog' (Right-click Recycle Bin -> Properties)")
+ }
 # RandomDate function
 function RandomDate {
   $days = Get-Random -minimum 300 -maximum 2190
@@ -692,7 +788,11 @@ function GenFiles([string]$status) {
  $TimeStamp = RandomDate
  $ext = Get-Random -input ".pdf",".txt",".docx",".doc",".xls", ".xlsx",".zip",".png",".jpg", ".jpeg", ".gif", ".bmp", ".html", ".htm", ".ppt", ".pptx"
  $namely = Get-Random -InputObject (get-content computer.lst)
- $location = Get-Random -input "$ENV:userprofile\Desktop\\", "$ENV:userprofile\Documents\\", "$ENV:homedrive\\", "$ENV:userprofile\Downloads\\", "$ENV:userprofile\Pictures\\"
+ if ($version -notlike '10.0*') {
+  $location = Get-Random -input "$ENV:userprofile\Desktop\\", "$ENV:userprofile\Documents\\", "$ENV:homedrive\\", "$ENV:userprofile\Downloads\\", "$ENV:userprofile\Pictures\\"
+ } else {
+  $location = Get-Random -input "$ENV:userprofile\Desktop\\", "$ENV:userprofile\Documents\\", "$ENV:userprofile\Downloads\\", "$ENV:userprofile\Pictures\\"
+ }
  $length = Get-Random -minimum 300 -maximum 4534350
  $buffer = New-Object Byte[] $length
  New-Item $location$namely$ext -type file -value $buffer
