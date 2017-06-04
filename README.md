@@ -1,6 +1,6 @@
-#Antivmdetection
+# Antivmdetection
 
-#Background:
+# Background:
 
 A script to help you create templates, which you can use with VirtualBox to make VM detection harder.
 
@@ -17,7 +17,7 @@ The main script will create the following files:
 * A dump of the DSDT, that is used in the template script above. 
 * A Windows Powershell file to be used inside the guest, to handle the settings that is not possible to change from the host. This script will have to be run twice, one for the changes that requires reboot and the second time for the pesky things that resurface at reboot. 
 
-#Notes:
+# Notes:
 
 * When the antivmdetect script can't find any suitable values to use, it will comment these settings in the newly created script, with a "#". These needs manual review as they might have impact on what is displayed in the VM.
 * Create the VM, Verify that "I/O APIC" is enabled (system > Motherboard). But don't start it, also exit the VirtualBox GUI. The shell script needs to be run before installation!. 
@@ -37,7 +37,7 @@ The main script will create the following files:
 
 + Please note, that this script does other things that is not covered by Pafish (for example W10 artifacts)
 
-#Version History:
+# Version History:
 
 * 0.1.7:
     + Windows 10 is now supported (feedback welcome)
