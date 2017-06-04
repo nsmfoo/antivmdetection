@@ -208,8 +208,11 @@ disk_dmi = {}
 try:
     if os.path.exists("/dev/sda"):
         # Disk serial
-        disk_serial = commands.getoutput(
-            "hdparm -i /dev/sda | grep -o 'SerialNo=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
+        disk_serial = commands.getoutput("hdparm -i /dev/sda | grep -o 'SerialNo=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
+        if 'SG_IO' in disk_serial:
+          print '[WARNING] Unable to aquire the disk serial number! Will add one, but please try to run this script on another machine instead..'
+          disk_serial = 'HUA721010KLA330'
+
         disk_dmi['SerialNumber'] = (serial_randomize(0, len(disk_serial)))
 
         if (len(disk_dmi['SerialNumber']) > 20):
@@ -241,6 +244,11 @@ except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
 
+if 'SG_IO' in disk_dmi['FirmwareRevision']:
+    print '[WARNING] Unable to aquire the disk firmware revision! Will add one, but please try to run this script on another machine instead..'
+    disk_dmi['FirmwareRevision'] = 'LMP07L3Q'
+    disk_dmi['FirmwareRevision'] = (serial_randomize(0, len(disk_dmi['FirmwareRevision'])))
+
 # Disk model number
 try:
     if os.path.exists("/dev/sda"):
@@ -253,6 +261,17 @@ try:
 except OSError:
     print "Haz RAID?"
     print commands.getoutput("lspci | grep -i raid")
+
+if 'SG_IO' in disk_dmi['ModelNumber']:
+    print '[WARNING] Unable to aquire the disk model number! Will add one, but please try to run this script on another machine instead..'
+    disk_vendor = 'SAMSUNG'
+    disk_vendor_part1 = 'F8E36628D278'
+    disk_vendor_part1 = (serial_randomize(0, len(disk_vendor_part1)))
+    disk_vendor_part2 = '611D3'
+    disk_vendor_part2 = (serial_randomize(0, len(disk_vendor_part2)))
+    disk_dmi['ModelNumber'] = (serial_randomize(0, len(disk_dmi['ModelNumber'])))
+    disk_dmi['ModelNumber'] = disk_vendor + ' ' + disk_vendor_part1 + '-' + disk_vendor_part2
+    print disk_dmi['ModelNumber']
 
 logfile.write('controller=`VBoxManage showvminfo "$1" --machinereadable | grep SATA`\n')
 
@@ -328,18 +347,24 @@ else:
     os.system("dd if=/sys/firmware/acpi/tables/DSDT of=" + dsdt_name + " >/dev/null 2>&1")
     logfile.write('VBoxManage setextradata "$1" "VBoxInternal/Devices/acpi/0/Config/CustomTable"\t' + os.getcwd() + '/' + dsdt_name + '\n')
 
-acpi_misc = commands.getoutput('acpidump -s | grep DSDT | grep -o "\(([A-Za-z0-9].*)\)" | tr -d "()"')
-if "option requires" in acpi_misc:
-    acpi_error = commands.getoutput("lsb_release -r | awk {' print $2 '} ")
+acpi_dsdt = commands.getoutput('acpidump -s | grep DSDT | grep -o "\(([A-Za-z0-9].*)\)" | tr -d "()"')
+acpi_facp = commands.getoutput('acpidump -s | grep FACP | grep -o "\(([A-Za-z0-9].*)\)" | tr -d "()"')
+
+if "option requires" in acpi_dsdt:
+    acpi_error = commands.getoutput("lsb_release -r | awk {' print $2 '}")
     print "The version of acpidump included in", acpi_error, 'is not supported'
     exit()
 else:
-    acpi_list = acpi_misc.split(' ')
-    acpi_list = filter(None, acpi_list)
+    acpi_list_dsdt = acpi_dsdt.split(' ')
+    acpi_list_dsdt = filter(None, acpi_list_dsdt)
 
-logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiOemId\t\'' + acpi_list[1] + '\'\n')
-logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiCreatorId\t\'string:' + acpi_list[4] + '\'\n')
-logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiCreatorRev\t\'' + acpi_list[5] + '\'\n')
+    acpi_list_facp = acpi_facp.split(' ')
+    acpi_list_facp = filter(None, acpi_list_facp)
+
+
+logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiOemId\t\'' + acpi_list_dsdt[1] + '\'\n')
+logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiCreatorId\t\'string:' + acpi_list_dsdt[4] + '\'\n')
+logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiCreatorRev\t\'' + acpi_list_dsdt[5] + '\'\n')
 
 # Randomize MAC address, based on the host interface MAC
 mac_seed = ':'.join(re.findall('..', '%012x' % uuid.getnode()))[0:9]
@@ -419,10 +444,10 @@ else:
 logfile = file(file_name, 'w+')
 
 # Tested on DELL, Lenovo clients and HP (old) server hardware, running Windows natively
-if 'DELL' in acpi_list[1]:
-      manu = acpi_list[1] + '__'
+if 'DELL' in acpi_list_dsdt[1]:
+      manu = acpi_list_dsdt[1] + '__'
 else:
-  manu = acpi_list[1]
+  manu = acpi_list_dsdt[1]
 
 # OS version - W7 or W10
 logfile.write('$version = (Get-WmiObject win32_operatingsystem).version\r\n')
@@ -430,10 +455,10 @@ logfile.write('$version = (Get-WmiObject win32_operatingsystem).version\r\n')
 # DSDT
 logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\VBOX__ -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\VBOX__ -Recurse\r\n')
-logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___' +  ' -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___' +  ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -Recurse\r\n')
-logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
-logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000002 -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000002 -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\' + acpi_list_dsdt[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000002 -Recurse\r\n')
 
 # FADT
 logfile.write('if ($version -like \'10.0*\') {\r\n')
@@ -441,16 +466,16 @@ logfile.write('$oddity = "HKLM:\HARDWARE\ACPI\FADT\\" + (Get-ChildItem "HKLM:\HA
 logfile.write('Invoke-Expression ("Copy-Item -Path " + $oddity + " -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu +  ' -Recurse")\r\n')
 logfile.write('Invoke-Expression ("Remove-Item -Path " + $oddity + " -Recurse")\r\n')
 
-logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___ -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list_facp[2] + '___ -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Recurse\r\n')
-logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
-logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list_facp[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list_facp[2] + '___\\' + acpi_list_facp[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list_facp[2] + '___\\00000001 -Recurse\r\n')
 logfile.write('}else{\r\n')
 #Win7
-logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___ -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list_facp[2] + '___ -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\VBOXFACP -Recurse\r\n')
-logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
-logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list_facp[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list_facp[2] + '___\\' + acpi_list_facp[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\FADT\\' + manu + '\\' + acpi_list_facp[2] + '___\\00000001 -Recurse\r\n')
 logfile.write('}\r\n')
 
 # RSDT
@@ -460,15 +485,15 @@ logfile.write('Invoke-Expression ("Copy-Item -Path " + $noproblem + " -Destinati
 logfile.write('Invoke-Expression ("Remove-Item -Path " + $noproblem + " -Recurse")\r\n')
 logfile.write('$cinnamon = "HKLM:\HARDWARE\ACPI\RSDT\\" + (Get-ChildItem "HKLM:\HARDWARE\ACPI\RSDT" -Name)\r\n')
 logfile.write('$the_mero = "HKLM:\HARDWARE\ACPI\RSDT\\" + (Get-ChildItem "HKLM:\HARDWARE\ACPI\RSDT" -Name) + "\\" + (Get-ChildItem $cinnamon -Name)\r\n')
-logfile.write('Invoke-Expression ("Copy-Item -Path " + $the_mero + " -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu +  '\\' + acpi_list[2] + '___ -Recurse")\r\n')
+logfile.write('Invoke-Expression ("Copy-Item -Path " + $the_mero + " -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu +  '\\' + acpi_list_dsdt[2] + '___ -Recurse")\r\n')
 logfile.write('Invoke-Expression ("Remove-Item -Path " + $the_mero + " -Recurse")\r\n')
-logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
-logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\' + acpi_list_dsdt[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000001 -Recurse\r\n')
 
 logfile.write('}else{\r\n')
 #Win7
-logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\' + acpi_list[3] + ' -Recurse\r\n')
-logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list[2] + '___\\00000001 -Recurse\r\n')
+logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\' + acpi_list_dsdt[3] + ' -Recurse\r\n')
+logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000001 -Recurse\r\n')
 logfile.write('}\r\n')
 
 # W10 specific settings:
@@ -490,10 +515,10 @@ logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\SSDT\\' + new_SDDT1 + '\\' 
 logfile.write('}\r\n}\r\n')
 
 # SystemBiosVersion - TODO: get real values
-logfile.write('New-ItemProperty -Path HKLM:\HARDWARE\DESCRIPTION\System -Name SystemBiosVersion -Value "'+ acpi_list[1] + ' - ' + acpi_list[0] + '" -PropertyType "String" -force\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\HARDWARE\DESCRIPTION\System -Name SystemBiosVersion -Value "'+ acpi_list_dsdt[1] + ' - ' + acpi_list_dsdt[0] + '" -PropertyType "String" -force\r\n')
 
 # VideoBiosVersion - TODO: get real values
-logfile.write('New-ItemProperty -Path HKLM:\HARDWARE\DESCRIPTION\System -Name VideoBiosVersion -Value "' + acpi_list[0] + '" -PropertyType "String" -force\r\n')
+logfile.write('New-ItemProperty -Path HKLM:\HARDWARE\DESCRIPTION\System -Name VideoBiosVersion -Value "' + acpi_list_dsdt[0] + '" -PropertyType "String" -force\r\n')
 
 # SystemBiosDate
 d_month, d_day, d_year = dmi_info['DmiBIOSReleaseDate'].split('/')

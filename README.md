@@ -8,7 +8,7 @@ My first post on the subject was in 2012 and have after that been updated at ran
 
 As a way to make it easier for me to add new content, I have decided to do the very same.
 
-The purpose of this script is to use, available settings without modifying the VirtualBox base. There are people who do really neat things by patching Virtualbox. But that is out of the scoop for this script. I think this approach has some merits as it does not (hopefully) break with every new release of VirtualBox. 
+The purpose of this script is to use available settings without modifying the VirtualBox base. There are people who do really neat things by patching Virtualbox. But that is out of the scoop for this script. I think this approach has some merits as it does not (hopefully) break with every new release of VirtualBox. 
 Overtime I have also included "things" that are not directly VM related, but rather things that malware is using to fingerprint installations, I hope you don't mind..
 
 The main script will create the following files: 
@@ -38,6 +38,12 @@ The main script will create the following files:
 + Please note, that this script does other things that is not covered by Pafish (for example W10 artifacts)
 
 # Version History:
+
+* 0.1.8:
+    + Improved support for Windows 10
+    + Merged markup fix from @bryant1410 (PR #14)
+    + Solved an issue for people using macOS + VBox/VMWare Fusion to create the templates. 
+      Creating the template from a virtual machine is not the best way regardless .. (issue #12 and possibly #15)
 
 * 0.1.7:
     + Windows 10 is now supported (feedback welcome)
