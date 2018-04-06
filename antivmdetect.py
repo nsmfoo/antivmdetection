@@ -183,7 +183,7 @@ except:
 
 # Write all data collected so far to file
 if dmi_info['DmiSystemProduct']:
-    file_name = dmi_info['DmiSystemProduct'].replace(" ", "").replace("/", "_") + '.sh'
+    file_name = dmi_info['DmiSystemProduct'].replace(" ", "").replace("/", "_").replace(",", "_") + '.sh'
 else:
     file_name = dmi_info['DmiChassisType'] + '_' + dmi_info['DmiBoardProduct'] + '.sh'
 
@@ -408,12 +408,12 @@ logfile.write('hostint_ip=$(VBoxManage list hostonlyifs | grep IPAddress: | awk 
 logfile.write('if [ $hostint_ip == \'192.168.56.1\' ]; then echo "[WARNING] You are using the default IP/IP-range. Consider changing the IP and the range used!"; fi\t\n')
 
 # Check witch paravirtualization interface is being used (Setting it to "none" will mitigate the "cpuid feature" check)
-logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -i ^paravirtprovider | cut -d "=" -f2 | sed s\'/"//g\')\t\n')
+logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -i ^paravirtprovider | cut -d "=" -f2 | sed \'s/"//g\')\t\n')
 logfile.write('if [ ! $virtualization_type == \'none\' ]; then echo "[WARNING] Please switch paravirtualization interface to: None!"; fi\t\n')
 
 # Check if audio support is enabled
-logfile.write('audio=$(VBoxManage showvminfo --machinereadable "$1" | grep audio | cut -d "=" -f2 | sed \'s/"//g\')\t\n')
-logfile.write('if [ $audio == "none" ]; then echo "[WARNING] Please consider adding an audio device!"; fi\t\n')
+logfile.write('audio=$(VBoxManage showvminfo --machinereadable "$1" | grep audio | cut -d "=" -f2 | sed \'s/"//g\' | head -1)\t\n')
+logfile.write('if [ $audio == \'none\' ]; then echo "[WARNING] Please consider adding an audio device!"; fi\t\n')
 
 # Check if you have the correct DevManview binary for the target architecture
 logfile.write('devman_arc=$(VBoxManage showvminfo --machinereadable "$1" | grep ostype | cut -d "=" -f2 | grep -o "(.*)" | sed \'s/(//;s/)//;s/-bit//\')\t\n')
@@ -656,7 +656,7 @@ foreach ($knackered in $notepad) {
 """
 logfile.write(langered)
 
-#################################################################
+################################################################
 # "First" boot changes, requires reboot in order to be finalized
 ################################################################
 # Check if this has been done before ..
