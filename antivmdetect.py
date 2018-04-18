@@ -404,8 +404,8 @@ logfile.write('memory_size=$(VBoxManage showvminfo --machinereadable "$1" | grep
 logfile.write('if [ $memory_size -lt "2048" ]; then echo "[WARNING] Memory size is 2GB or less. Consider adding more memory!"; fi\t\n')
 
 # Check if hostonlyifs IP address is the default
-logfile.write('hostint_ip=$(VBoxManage list hostonlyifs | grep IPAddress: | awk {\' print $2 \'})\t\n')
-logfile.write('if [ $hostint_ip == \'192.168.56.1\' ]; then echo "[WARNING] You are using the default IP/IP-range. Consider changing the IP and the range used!"; fi\t\n')
+logfile.write('hostint_ip=$(VBoxManage list hostonlyifs | grep IPAddress: | awk {\' print $2 \'} | grep \'192.168.56.1\')\t\n')
+logfile.write('if [ "$hostint_ip" == \'192.168.56.1\' ]; then echo "[WARNING] You are using the default IP/IP-range. Consider changing the IP and the range used!"; fi\t\n')
 
 # Check witch paravirtualization interface is being used (Setting it to "none" will mitigate the "cpuid feature" check)
 logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -i ^paravirtprovider | cut -d "=" -f2 | sed \'s/"//g\')\t\n')
