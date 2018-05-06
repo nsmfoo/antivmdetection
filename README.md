@@ -17,16 +17,33 @@ The main script will create the following files:
 * A dump of the DSDT, that is used in the template script above. 
 * A Windows Powershell file to be used inside the guest, to handle the settings that is not possible to change from the host. This script will have to be run twice, one for the changes that requires reboot and the second time for the pesky things that resurface at reboot. 
 
-# Notes:
+# Usage
 
-* When the antivmdetect script can't find any suitable values to use, it will comment these settings in the newly created script, with a "#". These needs manual review as they might have impact on what is displayed in the VM.
-* Create the VM, Verify that "I/O APIC" is enabled (system > Motherboard). But don't start it, also exit the VirtualBox GUI. The shell script needs to be run before installation!. 
+## Generate script from host
+
+* install dependencies `apt-get install python-dmidecode libcdio-utils acpidump mesa-utils`
+* download win binaries and extract them in antivmdetection directory : `wget https://download.sysinternals.com/files/VolumeId.zip  https://www.nirsoft.net/utils/devmanview-x64.zip` for 64bits.
+* run python script as sudo `sudo python antivmdetection.py`
+* make generated host script executable from current user `sudo chmod a+x xxxxx.sh`
+- create computer and user text files : `hostname > computer.lst`, `whoami > user.lst` (modify if you want to use different machine name and user for VM)
+* run script as current user (because VMs are located in current user home dir) : `/bin/bash xxxxx.sh my-virtual-machine-name`
+
+## Setup VM
+
+* Create the VM but don't start it, also exit the VirtualBox GUI. The shell script needs to be run before installation!.
+* Verify that "I/O APIC" is enabled (System > Motherboard tab).
+* Verify that "Paravirtualization Interface" is set to "None" (System > Acceleration tab).
+* Change CPU count to 2 or more if possible.
+* Set VM IP (File > Host Network Manager > Configure Adapter Manually  > IPV4 adress > 192.168.0.x).
 * The script expects that the storage layout to look like the following:
        + IDE: Primary master (Disk) and Primary slave (CD-ROM)
        + SATA: Port 0 (Disk) and Port 1 (CD-ROM)
 * Run the shell script to apply the setting to the guest 
 * Install the Windows Operating System (so far only tested on XP and W7) 
-* Move the batch script to the newly installed guest.
+
+## Run script from VM
+
+* Move the batch script (xxxx.ps1) to the newly installed guest.
 * Run the batch script inside the guest. Remember that most of the settings that gets modified, are reverted after each reboot. So make it run at boot if needed. 
     + As of version 0.1.4, some applied settings will require a reboot. So run the batch script once, the guest will be rebooted. Then run the script once again to finalize the setup.  
 * Before you apply the batch script inside the guest, please disable UAC (reboot required) otherwise you will not be able to modify the registry with the script.
@@ -34,6 +51,12 @@ The main script will create the following files:
 + If applied correctly, a Pafish run will result in this (no need to modify Virtualbox). 
 
 ![alt text](vmdetect0.1.5.png "VMDetect 1.5.x")
+
+# Notes:
+
+* When the antivmdetect script can't find any suitable values to use, it will comment these settings in the newly created script, with a "#". These needs manual review as they might have impact on what is displayed in the VM.
+* Host disk information will be taken from /dev/sda. Please modify if needed (line 209 `if os.path.exists("/dev/sda"):`)
+
 
 + Please note, that this script does other things that is not covered by Pafish (for example W10 artifacts)
 
