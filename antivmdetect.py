@@ -1,4 +1,16 @@
 #!/usr/bin/python
+
+'''
+By: oaustin
+** Contributions/Modifications **
+Context: Ubuntu 18.04 LTS(host) Output of this script to be used for guests: Win7SP1x86 & Win7SP1x64, Win8/10
+using both Virtualbox & VMware.
+Verification of hardened success using pafish
+
+Most of my modifications are those made to ensure smooth boot and run of the guest(Windows) VM and success upon a pafish test
+These modifications cleared all my errors from Issue Report by me(oaustin) from Oct 16 & Nov 1 2018
+Suggestions will be marked
+'''
 # Mikael,@nsmfoo - blog.prowling.nu
 
 # Tested on Ubuntu 14.04 and 16.04 LTS, using several brands of computers and types..but there is no guarantee that it will work anyway..
@@ -97,6 +109,8 @@ try:
 except:
     asset_tag = '** No value to retrieve **'
 
+# asset_tag should hold a value in the form with 'string:somevalue'
+# in the generated *.sh script, e.g 'string:201906'
 dmi_info['DmiBoardAssetTag'] = asset_tag
 
 try:
@@ -158,8 +172,12 @@ dmi_info['DmiChassisType'] = str(chassi_dict.get(dmi_info['DmiChassisType']))
 chassi = commands.getoutput("dmidecode -t3")
 try:
     dmi_info['DmiChassisAssetTag'] = re.search("Asset Tag: ([0-9A-Za-z ]*)", chassi).group(1)
+    # dmi_info['DmiChassisAssetTag'] should hold a value in the form with 'string:somevalue'
+    # in the generated *.sh script, e.g 'string:201906'
 except:
     dmi_info['DmiChassisAssetTag'] = '** No value to retrieve **'
+    # dmi_info['DmiChassisAssetTag'] should hold a value in the form with 'string:somevalue'
+    # in the generated *.sh script, e.g 'string:201906'
 
 # Create a new chassi serial number
 dmi_info['DmiChassisSerial'] = "string:" + (serial_randomize(0, len(chassi_serial)))
@@ -233,9 +251,11 @@ except OSError:
 
 # Disk firmware rev
 try:
-    if os.path.exists("/dev/sda"):
+    # oaustin - replaced /dev/sda with /dev/nvme0n1 - SATA vs NVM express
+    # probably useful to keep /dev/sda and add the check for /dev/nvme0n1
+    if os.path.exists("/dev/nvme0n1"):
         disk_fwrev = commands.getoutput(
-            "hdparm -i /dev/sda | grep -o 'FwRev=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
+            "hdparm -i /dev/nvme0n1 | grep -o 'FwRev=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
         disk_dmi['FirmwareRevision'] = disk_fwrev
     elif os.path.exists("/dev/cciss/c0d0"):
          hp_old_raid = commands.getoutput("smartctl -d cciss,1 -i /dev/cciss/c0d0")
@@ -249,11 +269,19 @@ if 'SG_IO' in disk_dmi['FirmwareRevision']:
     disk_dmi['FirmwareRevision'] = 'LMP07L3Q'
     disk_dmi['FirmwareRevision'] = (serial_randomize(0, len(disk_dmi['FirmwareRevision'])))
 
+## Added -- oaustin
+else:
+    disk_dmi['FirmwareRevision'] = 'LMP07L3Q'
+    disk_dmi['FirmwareRevision'] = (serial_randomize(0, len(disk_dmi['FirmwareRevision'])))
+## ------------- ##
+
 # Disk model number
 try:
-    if os.path.exists("/dev/sda"):
+    # oaustin - replaced /dev/sda with /dev/nvme0n1 - SATA vs NVM express
+    # probably useful to keep /dev/sda and add the check for /dev/nvme0n1
+    if os.path.exists("/dev/nvme0n1"):
         disk_modelno = commands.getoutput(
-            "hdparm -i /dev/sda | grep -o 'Model=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
+            "hdparm -i /dev/nvme0n1 | grep -o 'Model=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
         disk_dmi['ModelNumber'] = disk_modelno
     elif os.path.exists("/dev/cciss/c0d0"):
         hp_old_raid = commands.getoutput("smartctl -d cciss,1 -i /dev/cciss/c0d0")
@@ -272,10 +300,31 @@ if 'SG_IO' in disk_dmi['ModelNumber']:
     disk_dmi['ModelNumber'] = (serial_randomize(0, len(disk_dmi['ModelNumber'])))
     disk_dmi['ModelNumber'] = disk_vendor + ' ' + disk_vendor_part1 + '-' + disk_vendor_part2
     print disk_dmi['ModelNumber']
+    
+    
+## Added -- oaustin
+else:
+    disk_vendor = 'SAMSUNG' # probably select vendor randomly from a list -->[SAMSUNG, LENOVO, ASUS, DELL]
+    disk_vendor_part1 = 'F8E36628D278'
+    disk_vendor_part1 = (serial_randomize(0, len(disk_vendor_part1)))
+    disk_vendor_part2 = '611D3'
+    disk_vendor_part2 = (serial_randomize(0, len(disk_vendor_part2)))
+    disk_dmi['ModelNumber'] = (serial_randomize(0, len(disk_dmi['ModelNumber'])))
+    disk_dmi['ModelNumber'] = disk_vendor + ' ' + disk_vendor_part1 + '-' + disk_vendor_part2
+    print disk_dmi['ModelNumber']
+ ## ------------- ##   
+    
+    
 
-logfile.write('controller=`VBoxManage showvminfo "$1" --machinereadable | grep SATA`\n')
+# by oaustin -- produced an error in generated *.sh script
+# fix --> logfile.write('controller=$(VBoxManage showvminfo "$1" --machinereadable | grep SATA)\n')
+#logfile.write('controller=`VBoxManage showvminfo "$1" --machinereadable | grep SATA`\n')
+logfile.write('controller=$(VBoxManage showvminfo "$1" --machinereadable | grep SATA)\n')
 
-logfile.write('if [[ -z "$controller" ]]; then\n')
+# by oaustin -- produced an error in generated *.sh script
+# fix --> logfile.write('if [ -z "$controller" ]; then\n')
+#logfile.write('if [[ -z "$controller" ]]; then\n')
+logfile.write('if [ -z "$controller" ]; then\n')
 for k, v in disk_dmi.iteritems():
     if '** No value to retrieve **' in v:
         logfile.write('# VBoxManage setextradata "$1" VBoxInternal/Devices/piix3ide/0/Config/PrimaryMaster/' + k + '\t' + v + '\n')
@@ -341,11 +390,15 @@ if dmi_info['DmiSystemProduct']:
     dsdt_name = 'DSDT_' + dmi_info['DmiSystemProduct'].replace(" ", "").replace("/", "_") + '.bin'
     os.system("dd if=/sys/firmware/acpi/tables/DSDT of=" + dsdt_name + " >/dev/null 2>&1")
     logfile.write('VBoxManage setextradata "$1" "VBoxInternal/Devices/acpi/0/Config/CustomTable"\t' + os.getcwd() + '/' + dsdt_name + '\n')
+    # Temp Fix for error: ACPI tables bigger than 64KB (VERR_TOO_MUCH_DATA).
+    # fix --> logfile.write('' +'\n') or modifiy generated *.sh script and add '' as value
 
 else:
     dsdt_name = 'DSDT_' + dmi_info['DmiChassisType'] + '_' + dmi_info['DmiBoardProduct'] + '.bin'
     os.system("dd if=/sys/firmware/acpi/tables/DSDT of=" + dsdt_name + " >/dev/null 2>&1")
     logfile.write('VBoxManage setextradata "$1" "VBoxInternal/Devices/acpi/0/Config/CustomTable"\t' + os.getcwd() + '/' + dsdt_name + '\n')
+    # Temp Fix for error: ACPI tables bigger than 64KB (VERR_TOO_MUCH_DATA).
+    # fix --> logfile.write('' +'\n') or modifiy generated *.sh script and add '' as value
 
 acpi_dsdt = commands.getoutput('acpidump -s | grep DSDT | grep -o "\(([A-Za-z0-9].*)\)" | tr -d "()"')
 acpi_facp = commands.getoutput('acpidump -s | grep FACP | grep -o "\(([A-Za-z0-9].*)\)" | tr -d "()"')
@@ -430,6 +483,9 @@ print '[*] Finished: A DSDT dump has been created named:', dsdt_name
 try:
     if os.path.getsize(dsdt_name) > 64000:
         print "[WARNING] Size of the DSDT file is too large (> 64k). Try to build the template from another computer"
+        # oaustin - Temp Fix for error: ACPI tables bigger than 64KB (VERR_TOO_MUCH_DATA).
+        # fix --> logfile.write('' +'\n') or modifiy generated *.sh script and add '' as value
+        # I hae no luck with using an "old" machine. The smallest dsdt file I got after several machines was 67kb
 except:
     pass
 
@@ -459,6 +515,15 @@ logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\VBOXBIOS -Recurse\r\n')
 logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000002 -Destination HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\' + acpi_list_dsdt[3] + ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\DSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000002 -Recurse\r\n')
+
+## Added -- oaustin
+# As is in generated *.ps1 script
+# New-ItemProperty -Path "HKLM:\HARDWARE\DEVICEMAP\Scsi\Scsi Port 2\Scsi Bus 0\Target Id 0\Logical Unit Id 0" -Name Identifier -Value "DELL personal" -PropertyType "String" -force
+# New-ItemProperty -Path "HKLM:\HARDWARE\DEVICEMAP\Scsi\Scsi Port 2\Scsi Bus 0\Target Id 0\Logical Unit Id 0" -Name InquiryData -Value "Fav PC Only" -PropertyType "String" -force
+
+# logfile.write('New-ItemProperty -Path HKLM:\HARDWARE\DEVICEMAP\Scsi\Scsi Port 2\Scsi Bus 0\Target Id 0\Logical Unit Id 0 -Name Identifier -Value "' + manu + ' personal" -PropertyType "String" -force\r\n')
+# logfile.write('New-ItemProperty -Path "HKLM:\HARDWARE\DEVICEMAP\Scsi\Scsi Port 2\Scsi Bus 0\Target Id 0\Logical Unit Id 0" -Name InquiryData -Value "Fav PC Only" -PropertyType "String" -force\r\n')
+# ------------ #
 
 # FADT
 logfile.write('if ($version -like \'10.0*\') {\r\n')
