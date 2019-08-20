@@ -57,8 +57,6 @@ The main script will create the following files:
 
 * When the antivmdetect script can't find any suitable values to use, it will comment these settings in the newly created script, with a "#". These needs manual review as they might have impact on what is displayed in the VM.
 
-* Host disk information will be taken from /dev/sda. Please modify if needed (line 209 `if os.path.exists("/dev/sda"):`)
-
 ## Version History
 
 * 0.1.9:
