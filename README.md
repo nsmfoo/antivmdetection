@@ -22,7 +22,7 @@ The main script will create the following files:
 ## Generate script from host
 
 * Install dependencies `sudo apt install python3-pip libcdio-utils acpica-tools mesa-utils`
-* Install Python modules: `pip3 -r requirements.txt`
+* Install Python modules: `pip3 install -r requirements.txt`
 * Download the following Windows binaries and extract them in the antivmdetection directory : `wget https://download.sysinternals.com/files/VolumeId.zip  https://www.nirsoft.net/utils/devmanview-x64.zip` (x64 version).
 * Create computer and user text files : `hostname > computer.lst`, `whoami > user.lst` . Modify if you want to use different machine names and users for the VMs (recommended is to fill the files with a long list of user and computer names)
 * Run python script as sudo `sudo python3 antivmdetect.py`

@@ -1,1 +1,1 @@
-py-dmidecode
+py-dmidecode==0.0.2
