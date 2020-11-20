@@ -48,6 +48,7 @@ try:
         biosversion = v['BIOS Revision']
         dmi_info['DmiBIOSReleaseDate'] =  "string:" + v['Release Date']
 except:
+   # This typo is deliberate, as a previous version of py-dmidecode contained a typo 
    dmi_info['DmiBIOSReleaseDate'] =  "string:" + v['Relase Date']
 
 try:
