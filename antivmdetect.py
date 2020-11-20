@@ -6,6 +6,7 @@
 
 # Import stuff
 import subprocess
+import netifaces
 import os.path
 import dmidecode
 import random
@@ -55,8 +56,6 @@ except:
     dmi_info['DmiBIOSReleaseMajor'] = '** No value to retrieve **'
     dmi_info['DmiBIOSReleaseMinor'] = '** No value to retrieve **'
 
-
-# UNCLEAR CHECK OTHER HARDWAERE IF PRESENT
 # python-dmidecode does not currently reveal all values .. this is plan B
 dmi_firmware = subprocess.getoutput("dmidecode t0")
 try:
@@ -175,7 +174,6 @@ for v in dmidecode.get_by_type(4):
     dmi_info['DmiProcManufacturer'] = "string:" + v['Manufacturer'].replace(" ", "")
 # OEM strings
 
-# NOT SURE ABOURT THIS ONE...
 try:
     for v in dmidecode.get_by_type(11):
         oem_ver = v['Strings']['3']
@@ -368,13 +366,24 @@ logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/A
 logfile.write('VBoxManage setextradata "$1" VBoxInternal/Devices/acpi/0/Config/AcpiCreatorRev\t\'' + acpi_list_dsdt[5] + '\'\n')
 
 # Randomize MAC address, based on the host interface MAC
-mac_seed = ':'.join(re.findall('..', '%012x' % uuid.getnode()))[0:9]
-big_mac = mac_seed + "%02x:%02x:%02x" % (
-    random.randint(0, 255),
-    random.randint(0, 255),
-    random.randint(0, 255),
-)
-le_big_mac = re.sub(':', '', big_mac)
+find_int = netifaces.gateways()['default'][netifaces.AF_INET][1]
+macme = netifaces.ifaddresses(find_int)[netifaces.AF_LINK][0]['addr']
+l = macme.split(':')
+mac_seed = l[0]+l[1]+l[2]
+
+pattern = re.compile("^([0-9A-Fa-f]{2}){5}([0-9A-Fa-f]{2})$")
+
+match = None
+while match is None:
+    big_mac = mac_seed + "%02x:%02x:%02x" % (
+        random.randint(0, 255),
+        random.randint(0, 255),
+        random.randint(0, 255),
+        )
+
+    le_big_mac = re.sub(':', '', big_mac)
+    match = pattern.match(le_big_mac)
+
 logfile.write('VBoxManage modifyvm "$1" --macaddress1\t' + le_big_mac + '\n')
 
 # Copy and set the CPU brand string
@@ -400,7 +409,7 @@ while i<=47:
 logfile.write('cpu_count=$(VBoxManage showvminfo --machinereadable "$1" | grep cpus=[0-9]* | sed "s/cpus=//")\t\n')
 logfile.write('if [ $cpu_count -lt "2" ]; then echo "[WARNING] CPU count is less than 2. Consider adding more!"; fi\t\n')
 
-# Check the set memory size. If it's less them 2GB notify user
+# Check the set memory size. If it's less than 2GB notify user
 logfile.write('memory_size=$(VBoxManage showvminfo --machinereadable "$1" | grep memory=[0-9]* | sed "s/memory=//")\t\n')
 logfile.write('if [ $memory_size -lt "2048" ]; then echo "[WARNING] Memory size is 2GB or less. Consider adding more memory!"; fi\t\n')
 
@@ -409,7 +418,7 @@ logfile.write('net_used=$(VBoxManage showvminfo "$1" | grep NIC | grep -v disabl
 logfile.write('hostint_ip=$(VBoxManage list hostonlyifs | grep "$net_used\|IPAddress:" | sed -n \'2p\' | awk {\' print $2 \'} | grep \'192.168.56.1\')\t\n')
 logfile.write('if [ "$hostint_ip" == \'192.168.56.1\' ]; then echo "[WARNING] You are using the default IP/IP-range. Consider changing the IP and the range used!"; fi\t\n')
 
-# Check witch paravirtualization interface is being used (Setting it to "none" will mitigate the "cpuid feature" check)
+# Check which paravirtualization interface is being used (Setting it to "none" will mitigate the "cpuid feature" check)
 logfile.write('virtualization_type=$(VBoxManage showvminfo --machinereadable "$1" | grep -i ^paravirtprovider | cut -d "=" -f2 | sed \'s/"//g\')\t\n')
 logfile.write('if [ ! $virtualization_type == \'none\' ]; then echo "[WARNING] Please switch paravirtualization interface to: None!"; fi\t\n')
 
@@ -500,8 +509,8 @@ logfile.write('Invoke-Expression ("Copy-Item -Path " + $the_mero + " -Destinatio
 logfile.write('Invoke-Expression ("Remove-Item -Path " + $the_mero + " -Recurse")\r\n')
 logfile.write('Copy-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000001 -Destination HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\' + acpi_list_dsdt[3] + ' -Recurse\r\n')
 logfile.write('Remove-Item -Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000001 -Recurse\r\n')
-
 logfile.write('}else{\r\n')
+
 #Win7
 logfile.write('$check_exist = (Test-Path HKLM:\HARDWARE\ACPI\RSDT\\' + manu + '\\' + acpi_list_dsdt[2] + '___\\00000001)\r\n')
 logfile.write('if ($check_exist) {\r\n')
@@ -514,6 +523,7 @@ logfile.write('}}\r\n')
 
 # W10 specific settings:
 logfile.write('if ($version  -like \'10.0*\') {\r\n')
+
 # SDDT .. very beta ..
 new_SDDT1 = subprocess.getoutput("sudo acpidump -s | grep SSDT | grep -o '\(([A-Za-z0-9].*)\)' | head -n 1 | awk {' print $2 '}")
 new_SDDT2 = subprocess.getoutput("sudo acpidump -s | grep SSDT | grep -o '\(([A-Za-z0-9].*)\)' | head -n 1 | awk {' print $3 '}")
@@ -560,6 +570,7 @@ logfile.write('New-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Cryptography -Nam
 
 # W10 specific settings:
 logfile.write('if ($version  -like \'10.0*\') {\r\n')
+
 # DacType
 new_dactype1 = subprocess.getoutput("lspci | grep -i VGA | cut -d ':' -f3 | awk {' print $1 '}")
 new_dactype2 = subprocess.getoutput("lspci | grep -i VGA | cut -d ':' -f3 | awk {' print $2 '}")
