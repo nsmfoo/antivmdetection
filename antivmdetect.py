@@ -358,7 +358,7 @@ else:
     acpi_list_facp = acpi_facp.split(' ')
     acpi_list_facp = list(filter(None, acpi_list_facp))
 
-# A attempt to solve some of the issues with the AcpiCreatorRev values, I blame the VBox team ..
+# An attempt to solve some of the issues with the AcpiCreatorRev values, I blame the VBox team ..
 if isinstance(acpi_list_dsdt[5],str):
  acpi_list_dsdt[5] = re.sub("[^0-9]", "", acpi_list_dsdt[5])
 
