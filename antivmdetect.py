@@ -112,7 +112,7 @@ except:
 
 dmi_info['DmiBoardLocInChass'] = "string:" + loc_chassis.replace(" ", "")
 
-# Based on the list from https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.0.0.pdf
+# Based on the list from https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.4.0.pdf
 board_dict = {'Unknown': 1, 'Other': 2, 'Server Blade': 3, 'Connectivity Switch': 4, 'System Management Module': 5,
               'Processor Module': 6, 'I/O Module': 7, 'Memory Module': 8, 'Daughter board': 9, 'Motherboard': 10,
               'Processor/Memory Module': 11, 'Processor/IO Module': 12, 'Interconnect board': 13}
@@ -150,13 +150,14 @@ for v in dmidecode.get_by_type(3):
     dmi_info['DmiChassisVersion'] = "string:" + v['Version'].replace(" ", "")
     dmi_info['DmiChassisType'] = v['Type']
 
-# Based on the list from http://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.0.0.pdf
+# Based on the list from https://www.dmtf.org/sites/default/files/standards/documents/DSP0134_3.4.0.pdf
 chassi_dict = {'Other': 1, 'Unknown': 2, 'Desktop': 3, 'Low Profile Desktop': 4, 'Pizza Box': 5, 'Mini Tower': 6,
                'Tower': 7, 'Portable': 8, 'Laptop': 9, 'Notebook': 10, 'Hand Held': 11, 'Docking Station': 12,
                'All in One': 13, 'Sub Notebook': 14, 'Space-saving': 15, 'Lunch Box': 16, 'Main Server Chassis': 17,
                'Expansion Chassis': 18, 'SubChassis': 19, 'Bus Expansion Chassis': 20, 'Peripheral Chassis': 21, 'RAID Chassis': 22,
                'Rack Mount Chassis': 23, 'Sealed-case PC': 24, 'Multi-system chassis': 25, 'Compact PCI': 26, 'Advanced TCA': 27,
-               'Blade': 28, 'Blade Enclosure': 29, 'Tablet': 30, 'Convertible': 31, 'Detachable': 32}
+               'Blade': 28, 'Blade Enclosure': 29, 'Tablet': 30, 'Convertible': 31, 'Detachable': 32, 'IoT Gateway': 33,
+               'Embedded PC': 34, 'Mini PC': 35, 'Stick PC': 36}
 
 dmi_info['DmiChassisType'] = str(chassi_dict.get(dmi_info['DmiChassisType']))
 
