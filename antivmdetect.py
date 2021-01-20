@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # Mikael,@nsmfoo - blog.prowling.nu
 
-# Tested on Ubuntu 18.04 LTS, MacOS 10.14.x, using several brands of computers and types..but there is no guarantee that it will work anyway..
+# Tested on Ubuntu 20.04 LTS, MacOS 11.x, using several brands of computers and types..but there is no guarantee that it will work anyway..
 # Prerequisites: see README.md
 
 # Import stuff
@@ -23,7 +23,7 @@ if not os.geteuid()==0:
     sys.exit("\n[*] You need to run this script as root\n")
 
 # Check dependencies
-dependencies = ["/usr/bin/cd-drive", "/usr/bin/acpidump", "DevManView.exe", "Volumeid.exe", "computer.lst", "user.lst", "/usr/bin/glxinfo"]
+dependencies = ["/usr/bin/cd-drive", "/usr/bin/acpidump", "DevManView.exe", "Volumeid.exe", "computer.lst", "user.lst", "/usr/bin/glxinfo", "/usr/sbin/smartctl"]
 for dep in dependencies:
     if not (os.path.exists(dep)):
       print('[WARNING] Dependencies are missing, please verify that you have installed: ', dep)
@@ -223,7 +223,7 @@ if '/cow' in disk_name:
 # Disk serial
 try:
     if os.path.exists(disk_name):
-        disk_serial = subprocess.getoutput("hdparm -i " + disk_name + "| grep -o 'SerialNo=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
+        disk_serial = subprocess.getoutput("smartctl -i " + disk_name + " | grep -o 'Serial Number:  [A-Za-z0-9_\+\/ .\"-]*' | awk '{print $3}'")
         if 'SG_IO' in disk_serial:
           print('[WARNING] Unable to acquire the disk serial number! Will add one, but please try to run this script on another machine instead..')
           disk_serial = 'HUA721010KLA330'
@@ -238,7 +238,7 @@ except OSError:
 # Disk firmware rev
 try:
     if os.path.exists(disk_name):
-       disk_fwrev = subprocess.getoutput("hdparm -i " + disk_name + " | grep -o 'FwRev=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
+       disk_fwrev = subprocess.getoutput("smartctl -i " + disk_name + " | grep -o 'Firmware Version: [A-Za-z0-9_\+\/ .\"-]*' | awk '{print $3}'")
        disk_dmi['FirmwareRevision'] = disk_fwrev    
        if 'SG_IO' in disk_dmi['FirmwareRevision']:
          print('[WARNING] Unable to acquire the disk firmware revision! Will add one, but please try to run this script on another machine instead..')
@@ -250,7 +250,7 @@ except OSError:
 # Disk model number
 try:
     if os.path.exists(disk_name):
-        disk_modelno = subprocess.getoutput("hdparm -i " + disk_name + " | grep -o 'Model=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
+        disk_modelno = subprocess.getoutput("smartctl -i " + disk_name + " | grep -o 'Model Family: [A-Za-z0-9_\+\/ .\"-]*' | awk '{print $3}'")
         disk_dmi['ModelNumber'] = disk_modelno
 
         if 'SG_IO' in disk_dmi['ModelNumber']:
@@ -285,7 +285,7 @@ logfile.write('fi\n')
 # CD-ROM information
 cdrom_dmi = {}
 if os.path.islink('/dev/cdrom'):
-    # CD-ROM serial
+    # CD-ROM serial - No access to a computer with a CD-ROM to verify a switch to smartcrl, at the moment.
     cdrom_serial = subprocess.getoutput("hdparm -i /dev/cdrom | grep -o 'SerialNo=[A-Za-z0-9_\+\/ .\"-]*' | awk -F= '{print $2}'")
     if cdrom_serial:
         cdrom_dmi['ATAPISerialNumber'] = (serial_randomize(0, len(cdrom_serial)))
